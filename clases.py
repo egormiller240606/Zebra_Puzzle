@@ -1,9 +1,36 @@
 import random
 import heapq
 
+"""python3 clases.py"""
 
-def load_initial_data(path_to_zebra_01):
-   
+def load_strategies(path_to_strategies):
+    strategies = {}
+
+    with open(path_to_strategies, encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            parts = line.split(';')
+            agent_id = int(parts[0])
+            nation = parts[1]
+            route_probs_list = list(map(int, parts[2:8]))  # вероятности маршрутов к домам 1..6
+            house_exchange_prob = int(parts[8])
+            pet_exchange_prob = int(parts[9])
+
+            route_probs = {i+1: p for i, p in enumerate(route_probs_list)}
+
+            strategies[agent_id] = {
+                "route_probs": route_probs,
+                "house_exchange_prob": house_exchange_prob,
+                "pet_exchange_prob": pet_exchange_prob,
+                "nation": nation
+            }
+
+    return strategies
+
+
+def load_initial_data(path_to_zebra_01, strategies=None):
     agents = {}
     houses = {}
 
@@ -20,6 +47,20 @@ def load_initial_data(path_to_zebra_01):
             house = House(house_id=house_id, color=color, owner_id=house_id)
             houses[house_id] = house
 
+            # Получаем стратегию, если есть
+            # Получаем стратегию, если есть
+            if strategies and house_id in strategies:
+                strat = strategies[house_id]
+                route_probs = strat["route_probs"]
+                house_exch = strat["house_exchange_prob"]
+                pet_exch = strat["pet_exchange_prob"]
+            else:
+                # Если стратегии нет, оставляем пустой словарь
+                route_probs = {}
+                house_exch = 0
+                pet_exch = 0
+
+
             # Создаём агента
             agent = Agent(
                 agent_id=house_id,
@@ -28,9 +69,9 @@ def load_initial_data(path_to_zebra_01):
                 cigarettes=smoke,
                 pet=pet,
                 house_id=house_id,
-                route_probs={},        # пока пусто
-                house_exchange_prob=0, # пока 0
-                pet_exchange_prob=0    # пока 0
+                route_probs=route_probs,
+                house_exchange_prob=house_exch,
+                pet_exchange_prob=pet_exch
             )
             agents[house_id] = agent
 
@@ -116,14 +157,28 @@ class Agent:
         }
 
     def choose_trip_target(self, travel_matrix):
-    # идём по индексам 1..N (игнорируем 0)
+        """
+        Выбирает случайный дом для поездки, исключая текущий дом.
+        """
         possible_targets = [
             h for h in range(1, len(travel_matrix))
             if travel_matrix[self.location][h] is not None and h != self.location
         ]
+
         if not possible_targets:
             return None
-        return random.choice(possible_targets)
+
+        weights = [self.route_probs.get(h, 0) for h in possible_targets]
+        if sum(weights) == 0:
+            return random.choice(possible_targets)
+
+        total = sum(weights)
+        rnd = random.uniform(0, total)
+        cumulative = 0
+        for h, w in zip(possible_targets, weights):
+            cumulative += w
+            if rnd <= cumulative:
+                return h
 
     def __repr__(self):
         loc = self.location if self.location == self.house_id else f"travel→{self.location}"
@@ -165,9 +220,6 @@ class Event:
     def run(self, env):
         return ([self.agent_id] if self.agent_id is not None else [], [])
 
-    def to_log_string(self):
-        return f"{self.time};BASE_EVENT;agent={self.agent_id}"
-
     def isInvalid(self):
         return False
 
@@ -181,38 +233,43 @@ class FinishTripEvent(Event):
 
     def run(self, env):
         agent = env.agents[self.agent_id]
+
+        # Агент прибывает в target_house
         agent.is_travelling = False
         agent.location = self.target_house
         house = env.houses[self.target_house]
         house.enter(agent.id)
 
-        # успех — встретил хозяина дома?
-        self.success = 1 if env.houses[self.target_house].is_owner_home() else 0
-        
-        print(f"{env.time};FinishTrip;{self.success};{agent.nationality};{self.target_house}")
+        # Проверяем успех — встретил хозяина дома?
+        self.success = 1 if house.is_owner_home() else 0
 
-         # -------------------- обмен знаниями с другими агентами --------------------
-        for other_id in house.present_agents:
-            if other_id != agent.id:
-                other_agent = env.agents[other_id]
-                agent.update_knowledge(other_agent)
-                other_agent.update_knowledge(agent)
+        # -------------------- обмен знаниями с другими агентами только при успехе --------------------
+        if self.success == 1:
+            for other_id in house.present_agents:
+                if other_id != agent.id:
+                    other_agent = env.agents[other_id]
+                    agent.update_knowledge(other_agent)
+                    other_agent.update_knowledge(agent)
 
-        # -------------------- добавляем новую поездку --------------------
-        new_target = agent.choose_trip_target(env.travel_matrix)
-        if new_target is not None:
-            start_event = StartTripEvent(time=env.time, agent_id=agent.id, target_house=new_target)
-            env.push_event(start_event)
+        # -------------------- планирование следующей поездки --------------------
+        if agent.location != agent.house_id:
+            home = agent.house_id
+            travel_time = env.travel_matrix[agent.location][home]
+            if travel_time is not None:
+                start_event = StartTripEvent(time=env.time, agent_id=agent.id, target_house=home)
+                env.push_event(start_event)
+        else:
+            new_target = agent.choose_trip_target(env.travel_matrix)
+            if new_target is not None:
+                start_event = StartTripEvent(time=env.time, agent_id=agent.id, target_house=new_target)
+                env.push_event(start_event)
 
         return [agent.id], [self.target_house]
-    
+
     def to_log_csv(self, event_number, env):
         agent = env.agents[self.agent_id]
-
         return f"{event_number};{self.time};FinishTrip;{self.success};{agent.nationality};{self.target_house}"
 
-    def to_log_string(self):
-        return f"{self.time};FINISH_TRIP;agent={self.agent_id};house={self.target_house}"
     
 class StartTripEvent(Event):
     def __init__(self, time, agent_id, target_house):
@@ -230,8 +287,6 @@ class StartTripEvent(Event):
 
         finish_event = FinishTripEvent(agent.travel_finish_time, agent.id, self.target_house)
         env.push_event(finish_event)
-
-        print(f"{env.time};startTrip;{agent.nationality};{agent.location};{self.target_house}")
 
         return [agent.id], []
 
@@ -328,13 +383,15 @@ class Environment:
         return csv_log
 
 
+
+
 # Загружаем данные
+strategies = load_strategies("ZEBRA-strategies.csv")
 agents, houses = load_initial_data("zebra-01.csv")
 T = load_geography("ZEBRA-geo.csv")
 
 # Создаём окружение
 env = Environment(agents, houses, T)
-
 
 # Запускаем симуляцию
 log = env.run(max_time=10)
@@ -343,4 +400,3 @@ log = env.run(max_time=10)
 for entry in log:
     print(entry)
 
-"""cmmmfnfncfnl,""" 
