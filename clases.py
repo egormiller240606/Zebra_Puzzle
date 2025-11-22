@@ -1,5 +1,6 @@
 import random
 import heapq
+from typing import Dict, List, Optional, Any, Tuple
 
 # Constants for event priorities in simulation
 EVENT_PRIORITY_FINISH_TRIP = 1
@@ -7,19 +8,19 @@ EVENT_PRIORITY_EXCHANGE = 2
 EVENT_PRIORITY_START_TRIP = 3
 
 # Parse a CSV line by stripping whitespace and splitting by ';'
-def parse_csv_line(line):
+def parse_csv_line(line: str) -> Optional[List[str]]:
     line = line.strip()
     if not line:
         return None
     return line.split(';')
 
 # Format a log entry for CSV output
-def log_formatter(event_number, time, event_type, **kwargs):
+def log_formatter(event_number: int, time: int, event_type: str, **kwargs: Any) -> str:
     extra = ";".join(str(v) for v in kwargs.values())
     return f"{event_number};{time};{event_type};{extra}"
 
 # Load agent strategies from CSV file
-def load_strategies(path_to_strategies):
+def load_strategies(path_to_strategies: str) -> Dict[int, Dict[str, Any]]:
     strategies = {}
     with open(path_to_strategies, encoding='utf-8') as f:
         for line in f:
@@ -45,7 +46,7 @@ def load_strategies(path_to_strategies):
     return strategies
 
 # Load initial agent and house data from CSV
-def load_initial_data(path_to_zebra_01, strategies=None):
+def load_initial_data(path_to_zebra_01: str, strategies: Optional[Dict[int, Dict[str, Any]]] = None) -> Tuple[Dict[int, 'Agent'], Dict[int, 'House']]:
     agents = {}
     houses = {}
 
@@ -91,12 +92,12 @@ def load_initial_data(path_to_zebra_01, strategies=None):
     return agents, houses
 
 # Build mapping of house colors to probability indices
-def build_color_to_prob_index(houses):
+def build_color_to_prob_index(houses: Dict[int, 'House']) -> Dict[str, int]:
     colors = sorted(set(house.color for house in houses.values() if house.color))
     return {color: idx + 1 for idx, color in enumerate(colors)}
 
 # Load travel matrix from geography CSV
-def load_geography(path_to_geography):
+def load_geography(path_to_geography: str) -> List[List[Optional[int]]]:
     rows = []
     with open(path_to_geography, encoding='utf-8') as f:
         for line in f:
@@ -121,8 +122,8 @@ def load_geography(path_to_geography):
 
 # Agent class representing a simulation entity
 class Agent:
-    def __init__(self, agent_id, nationality, drink, cigarettes, pet,
-                  house_id, route_probs, house_exchange_prob, pet_exchange_prob):
+    def __init__(self, agent_id: int, nationality: str, drink: str, cigarettes: str, pet: str,
+                  house_id: int, route_probs: Dict[int, int], house_exchange_prob: int, pet_exchange_prob: int):
         self.id = agent_id
         self.nationality = nationality
         self.drink = drink
@@ -139,8 +140,6 @@ class Agent:
         self.house_exchange_prob = house_exchange_prob
         self.pet_exchange_prob = pet_exchange_prob
 
-        self.trip_count = 0
-
         self.knowledge = {
             self.id: {
                 "nationality": self.nationality,
@@ -152,7 +151,7 @@ class Agent:
             }
         }
     
-    def _get_agent_info(self):
+    def _get_agent_info(self) -> Dict[str, Any]:
         return {
             "nationality": self.nationality,
             "drink": self.drink,
@@ -162,10 +161,10 @@ class Agent:
             "location": self.location
         }
     
-    def update_knowledge(self, other_agent):
+    def update_knowledge(self, other_agent: 'Agent') -> None:
         self.knowledge[other_agent.id] = other_agent._get_agent_info()
 
-    def choose_trip_target(self, travel_matrix, houses, color_to_prob_index):
+    def choose_trip_target(self, travel_matrix: List[List[Optional[int]]], houses: Dict[int, 'House'], color_to_prob_index: Dict[str, int]) -> Optional[int]:
         possible_targets = [
             h for h in range(1, len(travel_matrix))
             if travel_matrix[self.location][h] is not None and h != self.location
@@ -192,7 +191,7 @@ class Agent:
             if rnd <= cumulative:
                 return h
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         loc = self.location if self.location == self.house_id else f"travel→{self.location}"
         return (f"Agent(id={self.id}, nat={self.nationality}, "
                 f"drink={self.drink}, cig={self.cigarettes}, pet={self.pet}, "
@@ -200,51 +199,51 @@ class Agent:
 
 # House class representing a location
 class House:
-    def __init__(self, house_id, color, owner_id):
+    def __init__(self, house_id: int, color: str, owner_id: int):
         self.id = house_id
         self.color = color
         self.owner_id = owner_id
         self.present_agents = set()
 
-    def enter(self, agent_id):
+    def enter(self, agent_id: int) -> None:
         self.present_agents.add(agent_id)
 
-    def leave(self, agent_id):
+    def leave(self, agent_id: int) -> None:
         self.present_agents.discard(agent_id)
 
-    def set_owner(self, new_owner_id):
+    def set_owner(self, new_owner_id: int) -> None:
         self.owner_id = new_owner_id
 
-    def is_owner_home(self):
+    def is_owner_home(self) -> bool:
         return self.owner_id in self.present_agents
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (f"House(id={self.id}, color={self.color}, "
                 f"owner={self.owner_id}, present={list(self.present_agents)})")
 
 # Base Event class for simulation events
 class Event:
-    def __init__(self, time, agent_id=None):
+    def __init__(self, time: int, agent_id: Optional[int] = None):
         self.time = time
         self.agent_id = agent_id
 
-    def run(self, env):
+    def run(self, env: 'Environment') -> Tuple[List[int], List[int]]:
         return ([self.agent_id] if self.agent_id is not None else [], [])
 
-    def is_invalid(self):
+    def is_invalid(self) -> bool:
         return False
 
-    def __lt__(self, other):
+    def __lt__(self, other: 'Event') -> bool:
         return self.time < other.time
 
 # Event for finishing a trip
 class FinishTripEvent(Event):
-    def __init__(self, time, agent_id, target_house):
+    def __init__(self, time: int, agent_id: int, target_house: int):
         super().__init__(time, agent_id)
         self.target_house = target_house
         self.success = 0
 
-    def run(self, env):
+    def run(self, env: 'Environment') -> Tuple[List[int], List[int]]:
         agent = env.agents[self.agent_id]
 
         agent.is_travelling = False
@@ -263,7 +262,7 @@ class FinishTripEvent(Event):
 
         return [agent.id], [self.target_house]
 
-    def to_log_csv(self, event_number, env):
+    def to_log_csv(self, event_number: int, env: 'Environment') -> str:
         agent = env.agents[self.agent_id]
 
         if self.target_house == agent.house_id:
@@ -273,11 +272,11 @@ class FinishTripEvent(Event):
 
 # Event for starting a trip
 class StartTripEvent(Event):
-    def __init__(self, time, agent_id, target_house):
+    def __init__(self, time: int, agent_id: int, target_house: int):
         super().__init__(time, agent_id)
         self.target_house = target_house
 
-    def run(self, env):
+    def run(self, env: 'Environment') -> Tuple[List[int], List[int]]:
         agent = env.agents[self.agent_id]
         if agent.is_travelling:
             return [], []
@@ -298,17 +297,15 @@ class StartTripEvent(Event):
         finish_event = FinishTripEvent(arrival_time, agent.id, self.target_house)
         env.push_event(finish_event)
 
-        agent.trip_count += 1
-
         return [agent.id], []
 
-    def to_log_csv(self, event_number, env):
+    def to_log_csv(self, event_number: int, env: 'Environment') -> str:
         agent = env.agents[self.agent_id]
         return f"{event_number};{self.time};StartTrip;{agent.nationality};{agent.location};{self.target_house}"
 
 # Event for exchanging pets
 class ChangePetEvent(Event):
-    def __init__(self, time, participant_ids, pets_after_exchange):
+    def __init__(self, time: int, participant_ids: List[int], pets_after_exchange: List[str]):
         super().__init__(time)
         self.participant_ids = participant_ids
         self.pets_after_exchange = pets_after_exchange
@@ -316,7 +313,7 @@ class ChangePetEvent(Event):
         if self.qty_participants < 2:
             raise ValueError("Exchange requires at least 2 participants")
     
-    def run(self, env):
+    def run(self, env: 'Environment') -> Tuple[List[int], List[int]]:
         first_participant = env.agents[self.participant_ids[0]]
         house_id = first_participant.location
         house = env.houses[house_id]
@@ -334,7 +331,7 @@ class ChangePetEvent(Event):
         
         return self.participant_ids, []
     
-    def to_log_csv(self, event_number, env):
+    def to_log_csv(self, event_number: int, env: 'Environment') -> str:
         nationalities = [env.agents[agent_id].nationality for agent_id in self.participant_ids]
         
         parts = [
@@ -351,13 +348,13 @@ class ChangePetEvent(Event):
 
 # Environment class managing the simulation
 class Environment:
-    def __init__(self, agents: dict, houses: dict, travel_matrix):
+    def __init__(self, agents: Dict[int, Agent], houses: Dict[int, House], travel_matrix: List[List[Optional[int]]]):
         self.agents = agents
         self.houses = houses
         self.travel_matrix = travel_matrix
         self.time = 0
-        self.event_queue = []
-        self.log = []
+        self.event_queue: List[Event] = []
+        self.log: List[str] = []
         
         self.color_to_prob_index = build_color_to_prob_index(houses)
 
@@ -371,16 +368,16 @@ class Environment:
                 start_event = StartTripEvent(time=0, agent_id=agent_id, target_house=target)
                 self.push_event(start_event)
 
-    def push_event(self, event):
+    def push_event(self, event: Event) -> None:
         heapq.heappush(self.event_queue, event)
 
-    def pop_all_events_with_time(self, t):
+    def pop_all_events_with_time(self, t: int) -> List[Event]:
         events = []
         while self.event_queue and self.event_queue[0].time == t:
             events.append(heapq.heappop(self.event_queue))
         return events
 
-    def detect_and_generate_exchanges(self):
+    def detect_and_generate_exchanges(self) -> List[ChangePetEvent]:
         exchange_events = []
         
         for house_id, house in self.houses.items():
@@ -412,7 +409,73 @@ class Environment:
                 
         return exchange_events
 
-    def run(self, max_time):
+    def _process_batch_events(self, batch: List[Event]) -> Tuple[List[FinishTripEvent], List[StartTripEvent], List[Event], List[ChangePetEvent]]:
+        def event_priority(e: Event) -> int:
+            if isinstance(e, FinishTripEvent):
+                return EVENT_PRIORITY_FINISH_TRIP
+            elif hasattr(e, 'participant_ids'):
+                return EVENT_PRIORITY_EXCHANGE
+            else:
+                return EVENT_PRIORITY_START_TRIP
+
+        batch.sort(key=event_priority)
+
+        finish_events = [e for e in batch if isinstance(e, FinishTripEvent)]
+        start_events = [e for e in batch if isinstance(e, StartTripEvent)]
+        other_events = [e for e in batch if not isinstance(e, (FinishTripEvent, StartTripEvent))]
+
+        for event in finish_events:
+            event.run(self)
+
+        exchange_events = []
+        if finish_events:
+            exchange_events = self.detect_and_generate_exchanges()
+            for event in exchange_events:
+                event.run(self)
+
+        for event in start_events:
+            event.run(self)
+
+        for event in other_events:
+            event.run(self)
+
+        return finish_events, start_events, other_events, exchange_events
+
+    def _log_events(self, finish_events: List[FinishTripEvent], exchange_events: List[ChangePetEvent], start_events: List[StartTripEvent], event_counter: int, csv_log: List[str]) -> int:
+        for event in finish_events:
+            csv_log.append(event.to_log_csv(event_counter, self))
+            event_counter += 1
+
+        for event in exchange_events:
+            csv_log.append(event.to_log_csv(event_counter, self))
+            event_counter += 1
+
+        for event in start_events:
+            csv_log.append(event.to_log_csv(event_counter, self))
+            event_counter += 1
+
+        return event_counter
+
+    def _plan_new_trips(self, finish_events: List[FinishTripEvent]) -> None:
+        for event in finish_events:
+            agent = self.agents[event.agent_id]
+            if agent.location == agent.house_id:
+                new_target = agent.choose_trip_target(self.travel_matrix, self.houses, self.color_to_prob_index)
+                if new_target is not None and new_target != agent.location:
+                    travel_time = self.travel_matrix[agent.location][new_target]
+                    if travel_time is not None and travel_time > 0:
+                        future_time = self.time + travel_time
+                        start_event = StartTripEvent(time=future_time, agent_id=agent.id, target_house=new_target)
+                        self.push_event(start_event)
+            else:
+                home = agent.house_id
+                travel_time = self.travel_matrix[agent.location][home]
+                if travel_time is not None and travel_time > 0:
+                    future_time = self.time + travel_time
+                    start_event = StartTripEvent(time=future_time, agent_id=agent.id, target_house=home)
+                    self.push_event(start_event)
+
+    def run(self, max_time: int) -> List[str]:
         event_counter = 1
         csv_log = []
 
@@ -425,66 +488,11 @@ class Environment:
             while self.event_queue and self.event_queue[0].time == t:
                 batch.append(heapq.heappop(self.event_queue))
 
-            def event_priority(e):
-                if isinstance(e, FinishTripEvent):
-                    return EVENT_PRIORITY_FINISH_TRIP
-                elif hasattr(e, 'participant_ids'):
-                    return EVENT_PRIORITY_EXCHANGE
-                else:
-                    return EVENT_PRIORITY_START_TRIP
+            finish_events, start_events, other_events, exchange_events = self._process_batch_events(batch)
 
-            batch.sort(key=event_priority)
+            event_counter = self._log_events(finish_events, exchange_events, start_events, event_counter, csv_log)
 
-            finish_events = [e for e in batch if isinstance(e, FinishTripEvent)]
-            start_events = [e for e in batch if isinstance(e, StartTripEvent)]
-            other_events = [e for e in batch if not isinstance(e, (FinishTripEvent, StartTripEvent))]
-
-            for event in finish_events:
-                event.run(self)
-
-            if finish_events:
-                exchange_events = self.detect_and_generate_exchanges()
-                for event in exchange_events:
-                    event.run(self)
-            else:
-                exchange_events = []
-
-            for event in start_events:
-                event.run(self)
-
-            for event in other_events:
-                event.run(self)
-
-            for event in finish_events:
-                csv_log.append(event.to_log_csv(event_counter, self))
-                event_counter += 1
-
-            for event in exchange_events:
-                csv_log.append(event.to_log_csv(event_counter, self))
-                event_counter += 1
-
-            for event in start_events:
-                csv_log.append(event.to_log_csv(event_counter, self))
-                event_counter += 1
-
-            for event in finish_events:
-                agent = self.agents[event.agent_id]
-                if agent.trip_count < 10:
-                    if agent.location == agent.house_id:
-                        new_target = agent.choose_trip_target(self.travel_matrix, self.houses, self.color_to_prob_index)
-                        if new_target is not None and new_target != agent.location:
-                            travel_time = self.travel_matrix[agent.location][new_target]
-                            if travel_time is not None and travel_time > 0:
-                                future_time = self.time + travel_time
-                                start_event = StartTripEvent(time=future_time, agent_id=agent.id, target_house=new_target)
-                                self.push_event(start_event)
-                    else:
-                        home = agent.house_id
-                        travel_time = self.travel_matrix[agent.location][home]
-                        if travel_time is not None and travel_time > 0:
-                            future_time = self.time + travel_time
-                            start_event = StartTripEvent(time=future_time, agent_id=agent.id, target_house=home)
-                            self.push_event(start_event)
+            self._plan_new_trips(finish_events)
 
         return csv_log
 
@@ -494,7 +502,7 @@ if __name__ == "__main__":
     T = load_geography("ZEBRA-geo.csv")
 
     env = Environment(agents, houses, T)
-    log = env.run(max_time=40)
+    log = env.run(max_time=10)
 
     for entry in log:
         print(entry)
