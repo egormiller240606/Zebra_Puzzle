@@ -342,3 +342,5 @@ log = env.run(max_time=10)
 # Печатаем CSV-лог
 for entry in log:
     print(entry)
+
+"""cmmmfnfncfnl,""" 
