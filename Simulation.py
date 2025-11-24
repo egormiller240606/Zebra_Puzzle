@@ -379,34 +379,34 @@ class Environment:
 
     def detect_and_generate_exchanges(self) -> List[ChangePetEvent]:
         exchange_events = []
-        
+
         for house_id, house in self.houses.items():
             present_agents = sorted(list(house.present_agents))
             if len(present_agents) < 2:
                 continue
-                
+
             ready_participants = []
             for agent_id in present_agents:
                 agent = self.agents[agent_id]
                 if random.randint(1, 100) <= agent.pet_exchange_prob:
                     ready_participants.append(agent_id)
-                    
+
             if len(ready_participants) >= 2:
                 ready_participants_sorted = sorted(ready_participants)
-                
-                num_participants = min(len(ready_participants_sorted), 3)
-                participants = ready_participants_sorted[:num_participants]
-                
+
+                # Use all ready participants instead of limiting to 3
+                participants = ready_participants_sorted
                 current_pets = [self.agents[agent_id].pet for agent_id in participants]
-                
+
+                # Rotate pets: each gets the next one's pet
                 pets_after_exchange = current_pets[1:] + [current_pets[0]]
-                
+
                 exchange_events.append(ChangePetEvent(
                     time=self.time,
                     participant_ids=participants,
                     pets_after_exchange=pets_after_exchange
                 ))
-                
+
         return exchange_events
 
     def _process_batch_events(self, batch: List[Event]) -> Tuple[List[FinishTripEvent], List[StartTripEvent], List[Event], List[ChangePetEvent]]:
