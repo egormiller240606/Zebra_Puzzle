@@ -139,30 +139,32 @@ class Agent:
         self.route_probs = route_probs
         self.house_exchange_prob = house_exchange_prob
         self.pet_exchange_prob = pet_exchange_prob
+        self.last_update_time = 0
 
         self.knowledge = {
             self.id: {
-                "nationality": self.nationality,
-                "drink": self.drink,
-                "cigarettes": self.cigarettes,
+                # "nationality": self.nationality,
+                # "drink": self.drink,
+                # "cigarettes": self.cigarettes,
                 "pet": self.pet,
                 "house": self.house_id,
-                "location": self.location
+                "location": self.location,
+                "t": 0
             }
         }
     
     def _get_agent_info(self) -> Dict[str, Any]:
         return {
-            "nationality": self.nationality,
-            "drink": self.drink,
-            "cigarettes": self.cigarettes,
+            # "nationality": self.nationality,
+            # "drink": self.drink,
+            # "cigarettes": self.cigarettes,
             "pet": self.pet,
             "house": self.house_id,
             "location": self.location
         }
     
-    def update_knowledge(self, other_agent: 'Agent') -> None:
-        self.knowledge[other_agent.id] = other_agent._get_agent_info()
+    def update_knowledge(self, other_agent: 'Agent', time: int) -> None:
+        self.knowledge[other_agent.id] = {**other_agent._get_agent_info(), "t": time}
 
     def choose_trip_target(self, travel_matrix: List[List[Optional[int]]], houses: Dict[int, 'House'], color_to_prob_index: Dict[str, int]) -> Optional[int]:
         possible_targets = [
@@ -257,8 +259,8 @@ class FinishTripEvent(Event):
             for other_id in list(house.present_agents):
                 if other_id != agent.id:
                     other_agent = env.agents[other_id]
-                    agent.update_knowledge(other_agent)
-                    other_agent.update_knowledge(agent)
+                    agent.update_knowledge(other_agent, self.time)
+                    other_agent.update_knowledge(agent, self.time)
 
         return [agent.id], [self.target_house]
 
@@ -321,13 +323,14 @@ class ChangePetEvent(Event):
         for agent_id, new_pet in zip(self.participant_ids, self.pets_after_exchange):
             agent = env.agents[agent_id]
             agent.pet = new_pet
-            agent.knowledge[agent_id] = agent._get_agent_info()
+            agent.knowledge[agent_id] = {**agent._get_agent_info(), "t": self.time}
+            agent.last_update_time = self.time
         
         all_present = list(house.present_agents)
         for witness_id in all_present:
             witness = env.agents[witness_id]
             for participant_id in self.participant_ids:
-                witness.update_knowledge(env.agents[participant_id])
+                witness.update_knowledge(env.agents[participant_id], self.time)
         
         return self.participant_ids, []
     
