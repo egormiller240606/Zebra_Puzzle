@@ -109,6 +109,7 @@ house_id;color;dist_to_1;dist_to_2;dist_to_3;dist_to_4;dist_to_5;dist_to_6
 - `StartTripEvent`: начало путешествия
 - `FinishTripEvent`: завершение путешествия
 - `ChangePetEvent`: обмен питомцами
+- `ChangeHouseEvent`: обмен домами
 
 #### Класс Environment
 Управляет всей симуляцией.
@@ -169,6 +170,11 @@ house_id;color;dist_to_1;dist_to_2;dist_to_3;dist_to_4;dist_to_5;dist_to_6
 - Циклический обмен питомцами между участниками
 - Обновление знаний всех присутствующих в доме
 
+#### ChangeHouseEvent
+- Циклический обмен домами между участниками
+- Обновление знаний всех присутствующих в доме
+- Обновление владельцев домов
+
 ### Планировка путешествий
 После FinishTrip:
 - Если агент дома: планирует новое путешествие (выбор цели по вероятностям)
@@ -180,6 +186,14 @@ house_id;color;dist_to_1;dist_to_2;dist_to_3;dist_to_4;dist_to_5;dist_to_6
 - Агенты участвуют с вероятностью `pet_exchange_prob`
 - Минимум 2 участника, максимум 3
 - Циклический обмен: A→B→C→A
+
+### Обмен домами
+- Происходит после успешных прибытий в дом прибытия
+- Для дома прибытия с ≥2 агентами и владельцем дома
+- Агенты участвуют с вероятностью `house_exchange_prob`
+- Минимум 2 участника
+- Циклический обмен домами: A→B→C→A
+- После обмена агенты планируют поездки в новые дома, если location != house_id
 
 ## Система знаний
 
@@ -200,6 +214,7 @@ house_id;color;dist_to_1;dist_to_2;dist_to_3;dist_to_4;dist_to_5;dist_to_6
 - Изначально знает только себя
 - Обновляется при встречах с владельцами домов
 - Обновляется при обменах питомцами (все присутствующие узнают новые питомцы участников)
+- Обновляется при обменах домами (все присутствующие узнают новые дома участников)
 
 
 ### StartTrip
@@ -213,6 +228,9 @@ house_id;color;dist_to_1;dist_to_2;dist_to_3;dist_to_4;dist_to_5;dist_to_6
 ### ChangePet
 `event_number;time;ChangePet;qty_participants;nat1;nat2;[nat3];pet1;pet2;[pet3]`
 
+### ChangeHouse
+`event_number;time;changeHouse;qty_participants;nat1;nat2;[nat3];house1;house2;[house3]`
+
 
 ## Пример и анализ лога
 
@@ -221,63 +239,87 @@ house_id;color;dist_to_1;dist_to_2;dist_to_3;dist_to_4;dist_to_5;dist_to_6
 3;0;StartTrip;American;6;1
 4;0;StartTrip;French;5;6
 5;0;StartTrip;English;2;1
-6;0;StartTrip;German;4;3
+6;0;StartTrip;German;4;1
 7;1;FinishTrip;0;Russian;6
-8;2;FinishTrip;0;Chinese;5
-9;3;FinishTrip;0;German;3
-10;4;FinishTrip;0;American;1
-11;5;FinishTrip;0;French;6
-12;5;FinishTrip;0;English;1
-13;5;StartTrip;Russian;6;1
-14;5;StartTrip;American;1;6
-15;6;FinishTrip;American;6
-16;6;ChangePet;2;French;American;Bear;Humpster
-17;8;StartTrip;German;3;4
-18;8;StartTrip;French;6;5
-19;9;FinishTrip;Russian;1
-20;10;StartTrip;American;6;1
-21;10;StartTrip;Russian;1;6
-22;11;FinishTrip;French;5
-23;11;FinishTrip;0;Russian;6
-24;11;StartTrip;English;1;2
+8;1;StartTrip;Russian;6;1
+9;2;FinishTrip;0;American;3
+10;2;FinishTrip;0;German;1
+11;2;FinishTrip;0;Chinese;5
+12;2;StartTrip;German;1;4
+13;4;FinishTrip;German;4
+14;4;StartTrip;German;4;1
+15;5;FinishTrip;Russian;1
+16;5;FinishTrip;1;English;1
+17;5;FinishTrip;0;French;6
+18;5;StartTrip;Russian;1;5
+19;5;StartTrip;English;1;2
+20;5;StartTrip;French;6;5
+21;6;FinishTrip;0;German;1
+22;6;StartTrip;German;1;4
+23;8;FinishTrip;0;Russian;5
+24;8;FinishTrip;1;French;5
+25;8;FinishTrip;German;4
+26;8;ChangePet;2;Russian;Chinese;Zebra;Dog
+27;8;changeHouse;3;Russian;Chinese;French;3;5;1
+28;8;StartTrip;German;4;1
+29;10;FinishTrip;0;German;1
+30;10;ChangePet;2;Russian;French;Humpster;Zebra
+31;10;StartTrip;German;1;4
+32;11;FinishTrip;English;2
+33;11;StartTrip;English;2;1
 ---- KNOWLEDGE ----
-1 {1: {'nationality': 'Russian', 'drink': 'Water', 'cigarettes': 'Marlboro', 'pet': 'Dog', 'house': 1, 'location': 1}, 2: {'nationality': 'English', 'drink': 'Beer', 'cigarettes': 'Pall Mall', 'pet': 'Cat', 'house': 2, 'location': 1}}
-2 {2: {'nationality': 'English', 'drink': 'Beer', 'cigarettes': 'Pall Mall', 'pet': 'Cat', 'house': 2, 'location': 2}, 1: {'nationality': 'Russian', 'drink': 'Water', 'cigarettes': 'Marlboro', 'pet': 'Dog', 'house': 1, 'location': 1}}
-3 {3: {'nationality': 'Chinese', 'drink': 'Juice', 'cigarettes': 'Dunhill', 'pet': 'Zebra', 'house': 3, 'location': 3}, 5: {'nationality': 'French', 'drink': 'Vodka', 'cigarettes': 'Camel', 'pet': 'Bear', 'house': 5, 'location': 5}}
-4 {4: {'nationality': 'German', 'drink': 'Wiskey', 'cigarettes': 'Kent', 'pet': 'Fish', 'house': 4, 'location': 4}}
-5 {5: {'nationality': 'French', 'drink': 'Vodka', 'cigarettes': 'Camel', 'pet': 'Bear', 'house': 5, 'location': 6}, 6: {'nationality': 'American', 'drink': 'Wine', 'cigarettes': 'Parlament', 'pet': 'Humpster', 'house': 6, 'location': 6}, 3: {'nationality': 'Chinese', 'drink': 'Juice', 'cigarettes': 'Dunhill', 'pet': 'Zebra', 'house': 3, 'location': 5}}
-6 {6: {'nationality': 'American', 'drink': 'Wine', 'cigarettes': 'Parlament', 'pet': 'Humpster', 'house': 6, 'location': 6}, 5: {'nationality': 'French', 'drink': 'Vodka', 'cigarettes': 'Camel', 'pet': 'Bear', 'house': 5, 'location': 6}}
+1;{1: {'pet': 'Humpster', 'house': 3, 'location': 5, 't': 10}, 2: {'pet': 'Cat', 'house': 2, 'location': 1, 't': 5}, 5: {'pet': 'Zebra', 'house': 1, 'location': 5, 't': 10}, 3: {'pet': 'Dog', 'house': 5, 'location': 5, 't': 8}}
+2;{2: {'pet': 'Cat', 'house': 2, 'location': 2, 't': 0}, 1: {'pet': 'Dog', 'house': 1, 'location': 1, 't': 5}}
+3;{3: {'pet': 'Dog', 'house': 5, 'location': 5, 't': 8}, 5: {'pet': 'Zebra', 'house': 1, 'location': 5, 't': 10}, 1: {'pet': 'Humpster', 'house': 3, 'location': 5, 't': 10}}
+4;{4: {'pet': 'Fish', 'house': 4, 'location': 4, 't': 0}, 1: {'pet': 'Dog', 'house': 1, 'location': 1, 't': 10}}
+5;{5: {'pet': 'Zebra', 'house': 1, 'location': 5, 't': 10}, 1: {'pet': 'Humpster', 'house': 3, 'location': 5, 't': 10}, 3: {'pet': 'Dog', 'house': 5, 'location': 5, 't': 8}}
+6;{6: {'pet': 'Bear', 'house': 6, 'location': 6, 't': 0}}
 
-* Russian (дом 1):
-* 1;0;StartTrip;Russian;1;6 (домой → чужой).
-* 7;1;FinishTrip;0;Russian;6 (не дом, план домой: [6][1]=4, время 1+4=5).
-* 13;5;StartTrip;Russian;6;1 (возвращение).
-* 19;9;FinishTrip;Russian;1 (дом, план новую: [1][6]=1, 9+1=10).
-* 21;10;StartTrip;Russian;1;6 (новая).
-* 23;11;FinishTrip;0;Russian;6 (не дом, план домой: 11+4=15, но лог обрывается).
-English (дом 2):
-* 5;0;StartTrip;English;2;1 (домой → чужой).
-* 12;5;FinishTrip;0;English;1 (дом, план новую: [1][2]=6, 5+6=11).
-* 24;11;StartTrip;English;1;2 (новая, лог обрывается).
-Chinese (дом 3):
-* 2;0;StartTrip;Chinese;3;5 (домой → чужой).
-* 8;2;FinishTrip;0;Chinese;5 (не дом, план домой: [5][3]=NA — нет пути, застревает, новых планов нет).
-German (дом 4):
-* 6;0;StartTrip;German;4;3 (домой → чужой).
-* 9;3;FinishTrip;0;German;3 (не дом, план домой: [3][4]=5, 3+5=8).
-* 17;8;StartTrip;German;3;4 (возвращение).
-* 26;13;FinishTrip;German;4 (дом, план новую, но лог обрывается).
-French (дом 5):
-* 4;0;StartTrip;French;5;6 (домой → чужой).
-* 11;5;FinishTrip;0;French;6 (не дом, план домой: [6][5]=3, 5+3=8).
-* 18;8;StartTrip;French;6;5 (возвращение).
-* 22;11;FinishTrip;French;5 (дом, план новую, но лог обрывается).
-American (дом 6):
-* 3;0;StartTrip;American;6;1 (домой → чужой).
-* 10;4;FinishTrip;0;American;1 (дом, план новую: [1][6]=1, 4+1=5).
-* 14;5;StartTrip;American;1;6 (новая).
-* 15;6;FinishTrip;American;6 (дом, план новую: [6][1]=4, 6+4=10).
-* 20;10;StartTrip;American;6;1 (новая, лог обрывается).
+* Russian (дом 1 → после обмена дом 3):
+* 1;0;StartTrip;Russian;1;6 (начало).
+* 15;5;FinishTrip;Russian;1 (вернулся домой).
+* 18;5;StartTrip;Russian;1;5 (новая поездка).
+* 23;8;FinishTrip;0;Russian;5 (прибыл в 5, success=0).
+* 27;8;changeHouse;3;Russian;Chinese;French;3;5;1 (обмен: Russian получает дом 3).
+* После обмена: location=5, house=3 → планирует поездку в 3 (но лог обрывается).
+* Знания: знает house=3 (себя), house=1 (French), house=5 (Chinese).
+
+* English (дом 2):
+* 5;0;StartTrip;English;2;1 (начало).
+* 16;5;FinishTrip;1;English;1 (прибыл в 1, success=1, встретил Russian).
+* 19;5;StartTrip;English;1;2 (новая).
+* 32;11;FinishTrip;English;2 (вернулся домой).
+
+* Chinese (дом 3 → после обмена дом 5):
+* 2;0;StartTrip;Chinese;3;5 (начало).
+* 11;2;FinishTrip;0;Chinese;5 (прибыл в 5).
+* 27;8;changeHouse;3;Russian;Chinese;French;3;5;1 (обмен: Chinese получает дом 5).
+* Знания: знает house=5 (себя), house=1 (French), house=3 (Russian).
+
+* German (дом 4):
+* 6;0;StartTrip;German;4;1 (начало).
+* 10;2;FinishTrip;0;German;1 (прибыл в 1).
+* 12;2;StartTrip;German;1;4 (возвращение).
+* 13;4;FinishTrip;German;4 (вернулся домой).
+* 14;4;StartTrip;German;4;1 (новая).
+* 21;6;FinishTrip;0;German;1 (прибыл в 1).
+* 22;6;StartTrip;German;1;4 (возвращение).
+* 25;8;FinishTrip;German;4 (вернулся домой).
+* 28;8;StartTrip;German;4;1 (новая).
+* 29;10;FinishTrip;0;German;1 (прибыл в 1).
+* 31;10;StartTrip;German;1;4 (возвращение).
+
+* French (дом 5 → после обмена дом 1):
+* 4;0;StartTrip;French;5;6 (начало).
+* 17;5;FinishTrip;0;French;6 (прибыл в 6).
+* 20;5;StartTrip;French;6;5 (возвращение).
+* 24;8;FinishTrip;1;French;5 (прибыл в 5, success=1).
+* 27;8;changeHouse;3;Russian;Chinese;French;3;5;1 (обмен: French получает дом 1).
+* Знания: знает house=1 (себя), house=3 (Russian), house=5 (Chinese).
+
+* American (дом 6):
+* 3;0;StartTrip;American;6;1 (начало).
+* 9;2;FinishTrip;0;American;3 (прибыл в 3).
 
 ## Детали реализации
 
@@ -289,7 +331,7 @@ American (дом 6):
 ### Обработка батчей
 События на одном времени обрабатываются в порядке приоритетов для корректного моделирования последовательности.
 
-### Генерация обменов
+### Генерация обменов питомцами
 - Только после `FinishTrip` событий
 - Для каждого дома отдельно
 - **Случайный выбор участников:**
@@ -297,6 +339,16 @@ American (дом 6):
   - Если число ≤ `pet_exchange_prob` агента, он добавляется в список готовых к обмену
   - Минимум 2 участника для обмена, максимум 3 (берутся первые 3 из отсортированного списка)
 - Циклический сдвиг питомцев: A→B→C→A (где A, B, C - участники)
+
+### Генерация обменов домами
+- Только после успешных `FinishTrip` событий (success=1) в дом прибытия
+- Для дома прибытия с ≥2 агентами и владельцем дома
+- **Случайный выбор участников:**
+  - Для каждого агента в доме генерируется случайное число от 1 до 100
+  - Если число ≤ `house_exchange_prob` агента, он добавляется в список готовых к обмену
+  - Минимум 2 участника для обмена
+- Циклический сдвиг домов: A→B→C→A (где A, B, C - участники)
+- После обмена планируются поездки участников в новые дома, если location != house_id
 
 ### Выбор маршрутов
 - Исключение текущей локации

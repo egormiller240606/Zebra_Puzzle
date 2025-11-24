@@ -1,53 +1,40 @@
-1;0;StartTrip;Russian;1;5
-2;0;StartTrip;Chinese;3;4
-3;0;StartTrip;American;6;5
-4;0;StartTrip;French;5;4
-5;0;StartTrip;English;2;4
+1;0;StartTrip;Russian;1;6
+2;0;StartTrip;Chinese;3;5
+3;0;StartTrip;American;6;3
+4;0;StartTrip;French;5;6
+5;0;StartTrip;English;2;1
 6;0;StartTrip;German;4;1
-7;1;FinishTrip;0;English;4
-8;1;StartTrip;English;4;2
-9;2;FinishTrip;0;German;1
-10;2;FinishTrip;English;2
-11;2;StartTrip;German;1;4
-12;2;StartTrip;English;2;4
-13;3;FinishTrip;0;American;5
-14;3;FinishTrip;0;English;4
-15;3;FinishTrip;0;Russian;5
-16;3;ChangePet;2;Russian;American;Bear;Dog
-17;3;StartTrip;American;5;6
-18;3;StartTrip;English;4;2
-19;4;FinishTrip;German;4
-20;4;FinishTrip;1;French;4
-21;4;FinishTrip;English;2
-22;4;StartTrip;German;4;1
-23;4;StartTrip;French;4;5
-24;4;StartTrip;English;2;3
-25;5;FinishTrip;0;Chinese;4
-26;5;StartTrip;Chinese;4;3
-27;6;FinishTrip;0;German;1
-28;6;StartTrip;German;1;4
-29;8;FinishTrip;Chinese;3
-30;8;FinishTrip;American;6
-31;8;FinishTrip;German;4
-32;8;FinishTrip;1;English;3
-33;8;ChangePet;2;English;Chinese;Zebra;Cat
-34;8;StartTrip;Chinese;3;2
-35;8;StartTrip;American;6;1
-36;8;StartTrip;English;3;2
-37;8;StartTrip;German;4;1
-38;10;FinishTrip;1;French;5
-39;10;FinishTrip;0;German;1
-40;10;ChangePet;2;Russian;French;Humpster;Bear
-41;10;changeHouse;2;Russian;French;5;1
-42;10;StartTrip;German;1;4
-43;11;FinishTrip;English;2
-44;11;FinishTrip;1;Chinese;2
-45;11;StartTrip;English;2;1
-46;11;StartTrip;Chinese;2;3
+7;1;FinishTrip;0;Russian;6
+8;1;StartTrip;Russian;6;1
+9;2;FinishTrip;0;American;3
+10;2;FinishTrip;0;German;1
+11;2;FinishTrip;0;Chinese;5
+12;2;StartTrip;German;1;4
+13;4;FinishTrip;German;4
+14;4;StartTrip;German;4;1
+15;5;FinishTrip;Russian;1
+16;5;FinishTrip;1;English;1
+17;5;FinishTrip;0;French;6
+18;5;StartTrip;Russian;1;5
+19;5;StartTrip;English;1;2
+20;5;StartTrip;French;6;5
+21;6;FinishTrip;0;German;1
+22;6;StartTrip;German;1;4
+23;8;FinishTrip;0;Russian;5
+24;8;FinishTrip;1;French;5
+25;8;FinishTrip;German;4
+26;8;ChangePet;2;Russian;Chinese;Zebra;Dog
+27;8;changeHouse;3;Russian;Chinese;French;3;5;1
+28;8;StartTrip;German;4;1
+29;10;FinishTrip;0;German;1
+30;10;ChangePet;2;Russian;French;Humpster;Zebra
+31;10;StartTrip;German;1;4
+32;11;FinishTrip;English;2
+33;11;StartTrip;English;2;1
 ---- KNOWLEDGE ----
-1;{1: {'pet': 'Humpster', 'house': 5, 'location': 5, 't': 10}, 6: {'pet': 'Dog', 'house': 6, 'location': 5, 't': 3}, 5: {'pet': 'Bear', 'house': 1, 'location': 5, 't': 10}}
-2;{2: {'pet': 'Zebra', 'house': 2, 'location': 3, 't': 8}, 3: {'pet': 'Cat', 'house': 3, 'location': 2, 't': 11}}
-3;{3: {'pet': 'Cat', 'house': 3, 'location': 3, 't': 8}, 2: {'pet': 'Zebra', 'house': 2, 'location': 2, 't': 11}}
-4;{4: {'pet': 'Fish', 'house': 4, 'location': 4, 't': 0}, 5: {'pet': 'Humpster', 'house': 5, 'location': 4, 't': 4}}
-5;{5: {'pet': 'Bear', 'house': 1, 'location': 5, 't': 10}, 4: {'pet': 'Fish', 'house': 4, 'location': 4, 't': 4}, 1: {'pet': 'Humpster', 'house': 5, 'location': 5, 't': 10}}
-6;{6: {'pet': 'Dog', 'house': 6, 'location': 5, 't': 3}, 1: {'pet': 'Bear', 'house': 1, 'location': 5, 't': 3}}
+1;{1: {'pet': 'Humpster', 'house': 3, 'location': 5, 't': 10}, 2: {'pet': 'Cat', 'house': 2, 'location': 1, 't': 5}, 5: {'pet': 'Zebra', 'house': 1, 'location': 5, 't': 10}, 3: {'pet': 'Dog', 'house': 5, 'location': 5, 't': 8}}
+2;{2: {'pet': 'Cat', 'house': 2, 'location': 2, 't': 0}, 1: {'pet': 'Dog', 'house': 1, 'location': 1, 't': 5}}
+3;{3: {'pet': 'Dog', 'house': 5, 'location': 5, 't': 8}, 5: {'pet': 'Zebra', 'house': 1, 'location': 5, 't': 10}, 1: {'pet': 'Humpster', 'house': 3, 'location': 5, 't': 10}}
+4;{4: {'pet': 'Fish', 'house': 4, 'location': 4, 't': 0}}
+5;{5: {'pet': 'Zebra', 'house': 1, 'location': 5, 't': 10}, 1: {'pet': 'Humpster', 'house': 3, 'location': 5, 't': 10}, 3: {'pet': 'Dog', 'house': 5, 'location': 5, 't': 8}}
+6;{6: {'pet': 'Bear', 'house': 6, 'location': 6, 't': 0}}
