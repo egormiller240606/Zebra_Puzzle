@@ -93,7 +93,7 @@ def load_initial_data(path_to_zebra_01: str, strategies: Optional[Dict[int, Dict
 
 # Build mapping of house colors to probability indices
 def build_color_to_prob_index(houses: Dict[int, 'House']) -> Dict[str, int]:
-    colors = sorted(set(house.color for house in houses.values() if house.color))
+    colors = [houses[hid].color for hid in sorted(houses.keys())]
     return {color: idx + 1 for idx, color in enumerate(colors)}
 
 # Load travel matrix from geography CSV
@@ -516,9 +516,9 @@ if __name__ == "__main__":
     env = Environment(agents, houses, T)
     log = env.run(max_time=10)
 
-    for entry in log:
-        print(entry)
-
-    print("---- KNOWLEDGE ----")
-    for a in env.agents.values():
-        print(a.id, a.knowledge)
+    with open("simulation_log.csv", "w", encoding="utf-8") as f:
+        for entry in log:
+            f.write(entry + "\n")
+        f.write("---- KNOWLEDGE ----\n")
+        for a in env.agents.values():
+            f.write(f"{a.id};{a.knowledge}\n")
