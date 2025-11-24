@@ -238,6 +238,65 @@ class Event:
     def __lt__(self, other: 'Event') -> bool:
         return self.time < other.time
 
+# Event for exchanging houses
+class ChangeHouseEvent(Event):
+    def __init__(self, time: int, participant_ids: List[int], houses_after_exchange: List[int]):
+        super().__init__(time)
+        self.participant_ids = participant_ids
+        self.houses_after_exchange = houses_after_exchange
+        self.qty_participants = len(participant_ids)
+        if self.qty_participants < 2:
+            raise ValueError("Exchange requires at least 2 participants")
+
+    def run(self, env: 'Environment') -> Tuple[List[int], List[int]]:
+        first_participant = env.agents[self.participant_ids[0]]
+        house_id = first_participant.location
+        house = env.houses[house_id]
+
+        # Update agent house_ids and house owners
+        for agent_id, new_house_id in zip(self.participant_ids, self.houses_after_exchange):
+            agent = env.agents[agent_id]
+            agent.house_id = new_house_id
+            agent.knowledge[agent_id] = {**agent._get_agent_info(), "t": self.time}
+            agent.last_update_time = self.time
+
+        # Update house owners
+        for new_house_id, new_owner_id in zip(self.houses_after_exchange, self.participant_ids):
+            env.houses[new_house_id].set_owner(new_owner_id)
+
+        # Update knowledge of all present agents (witnesses)
+        all_present = list(house.present_agents)
+        for witness_id in all_present:
+            witness = env.agents[witness_id]
+            for participant_id in self.participant_ids:
+                witness.update_knowledge(env.agents[participant_id], self.time)
+
+        # Plan trips for participants if needed (for transparency)
+        for agent_id in self.participant_ids:
+            agent = env.agents[agent_id]
+            if agent.location != agent.house_id:
+                travel_time = env.travel_matrix[agent.location][agent.house_id]
+                if travel_time is not None and travel_time >= 0:
+                    start_event = StartTripEvent(time=self.time, agent_id=agent.id, target_house=agent.house_id)
+                    env.push_event(start_event)
+
+        return self.participant_ids, []
+
+    def to_log_csv(self, event_number: int, env: 'Environment') -> str:
+        nationalities = [env.agents[agent_id].nationality for agent_id in self.participant_ids]
+
+        parts = [
+            str(event_number),
+            str(self.time),
+            "changeHouse",
+            str(self.qty_participants)
+        ]
+
+        parts.extend(nationalities)
+        parts.extend(map(str, self.houses_after_exchange))
+
+        return ";".join(parts)
+
 # Event for finishing a trip
 class FinishTripEvent(Event):
     def __init__(self, time: int, agent_id: int, target_house: int):
@@ -262,7 +321,33 @@ class FinishTripEvent(Event):
                     agent.update_knowledge(other_agent, self.time)
                     other_agent.update_knowledge(agent, self.time)
 
+            # Detect and execute house exchange
+            house_exchange_event = self.detect_house_exchange(env, house)
+            if house_exchange_event:
+                house_exchange_event.run(env)
+                env.house_exchange_events.append(house_exchange_event)
+
         return [agent.id], [self.target_house]
+
+    def detect_house_exchange(self, env: 'Environment', house: 'House') -> Optional[ChangeHouseEvent]:
+        present_agents = sorted(list(house.present_agents))
+        if len(present_agents) < 2:
+            return None
+
+        ready_participants = []
+        for agent_id in present_agents:
+            agent = env.agents[agent_id]
+            if random.randint(1, 100) <= agent.house_exchange_prob:
+                ready_participants.append(agent_id)
+
+        if len(ready_participants) < 2:
+            return None
+
+        participants = sorted(ready_participants)
+        current_houses = [env.agents[pid].house_id for pid in participants]
+        houses_after_exchange = current_houses[1:] + [current_houses[0]]
+
+        return ChangeHouseEvent(time=self.time, participant_ids=participants, houses_after_exchange=houses_after_exchange)
 
     def to_log_csv(self, event_number: int, env: 'Environment') -> str:
         agent = env.agents[self.agent_id]
@@ -314,39 +399,39 @@ class ChangePetEvent(Event):
         self.qty_participants = len(participant_ids)
         if self.qty_participants < 2:
             raise ValueError("Exchange requires at least 2 participants")
-    
+
     def run(self, env: 'Environment') -> Tuple[List[int], List[int]]:
         first_participant = env.agents[self.participant_ids[0]]
         house_id = first_participant.location
         house = env.houses[house_id]
-        
+
         for agent_id, new_pet in zip(self.participant_ids, self.pets_after_exchange):
             agent = env.agents[agent_id]
             agent.pet = new_pet
             agent.knowledge[agent_id] = {**agent._get_agent_info(), "t": self.time}
             agent.last_update_time = self.time
-        
+
         all_present = list(house.present_agents)
         for witness_id in all_present:
             witness = env.agents[witness_id]
             for participant_id in self.participant_ids:
                 witness.update_knowledge(env.agents[participant_id], self.time)
-        
+
         return self.participant_ids, []
-    
+
     def to_log_csv(self, event_number: int, env: 'Environment') -> str:
         nationalities = [env.agents[agent_id].nationality for agent_id in self.participant_ids]
-        
+
         parts = [
             str(event_number),
             str(self.time),
             "ChangePet",
             str(self.qty_participants)
         ]
-        
+
         parts.extend(nationalities)
         parts.extend(self.pets_after_exchange)
-        
+
         return ";".join(parts)
 
 # Environment class managing the simulation
@@ -358,7 +443,8 @@ class Environment:
         self.time = 0
         self.event_queue: List[Event] = []
         self.log: List[str] = []
-        
+        self.house_exchange_events: List[ChangeHouseEvent] = []
+
         self.color_to_prob_index = build_color_to_prob_index(houses)
 
         for house_id, house in houses.items():
@@ -444,12 +530,16 @@ class Environment:
 
         return finish_events, start_events, other_events, exchange_events
 
-    def _log_events(self, finish_events: List[FinishTripEvent], exchange_events: List[ChangePetEvent], start_events: List[StartTripEvent], event_counter: int, csv_log: List[str]) -> int:
+    def _log_events(self, finish_events: List[FinishTripEvent], exchange_events: List[ChangePetEvent], house_exchange_events: List[ChangeHouseEvent], start_events: List[StartTripEvent], event_counter: int, csv_log: List[str]) -> int:
         for event in finish_events:
             csv_log.append(event.to_log_csv(event_counter, self))
             event_counter += 1
 
         for event in exchange_events:
+            csv_log.append(event.to_log_csv(event_counter, self))
+            event_counter += 1
+
+        for event in house_exchange_events:
             csv_log.append(event.to_log_csv(event_counter, self))
             event_counter += 1
 
@@ -462,6 +552,8 @@ class Environment:
     def _plan_new_trips(self, finish_events: List[FinishTripEvent]) -> None:
         for event in finish_events:
             agent = self.agents[event.agent_id]
+            if agent.is_travelling:
+                continue  # Skip if already planning a trip (e.g., after house exchange)
             if agent.location == agent.house_id:
                 new_target = agent.choose_trip_target(self.travel_matrix, self.houses, self.color_to_prob_index)
                 if new_target is not None:
@@ -497,11 +589,12 @@ class Environment:
 
                 # Sort batch by priority and process
                 batch.sort(key=lambda e: (EVENT_PRIORITY_FINISH_TRIP if isinstance(e, FinishTripEvent) else
-                                           EVENT_PRIORITY_EXCHANGE if hasattr(e, 'participant_ids') else
-                                           EVENT_PRIORITY_START_TRIP))
+                                            EVENT_PRIORITY_EXCHANGE if hasattr(e, 'participant_ids') else
+                                            EVENT_PRIORITY_START_TRIP))
 
                 finish_events, start_events, other_events, exchange_events = self._process_batch_events(batch)
-                event_counter = self._log_events(finish_events, exchange_events, start_events, event_counter, csv_log)
+                event_counter = self._log_events(finish_events, exchange_events, self.house_exchange_events, start_events, event_counter, csv_log)
+                self.house_exchange_events.clear()
 
                 # Plan new trips after processing (may add events at current t)
                 self._plan_new_trips(finish_events)
