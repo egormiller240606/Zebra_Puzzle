@@ -280,19 +280,19 @@ class StartTripEvent(Event):
         agent = env.agents[self.agent_id]
         if agent.is_travelling:
             return [], []
-        
+
         if not agent.is_travelling and agent.location in env.houses:
             env.houses[agent.location].leave(agent.id)
-        
+
         agent.is_travelling = True
         agent.travel_target = self.target_house
 
         travel_time = env.travel_matrix[agent.location][self.target_house]
-        if travel_time is None or travel_time <= 0:
+        if travel_time is None or travel_time < 0:  # Changed from <= 0 to < 0
             agent.is_travelling = False
             agent.travel_target = None
             return [], []
-            
+
         arrival_time = self.time + travel_time
         finish_event = FinishTripEvent(arrival_time, agent.id, self.target_house)
         env.push_event(finish_event)
@@ -461,18 +461,18 @@ class Environment:
             agent = self.agents[event.agent_id]
             if agent.location == agent.house_id:
                 new_target = agent.choose_trip_target(self.travel_matrix, self.houses, self.color_to_prob_index)
-                if new_target is not None and new_target != agent.location:
+                if new_target is not None:
                     travel_time = self.travel_matrix[agent.location][new_target]
-                    if travel_time is not None and travel_time > 0:
-                        future_time = self.time + travel_time
-                        start_event = StartTripEvent(time=future_time, agent_id=agent.id, target_house=new_target)
+                    if travel_time is not None and travel_time >= 0:  # Allow zero travel time
+                        start_time = self.time  # Schedule at current time for instant processing
+                        start_event = StartTripEvent(time=start_time, agent_id=agent.id, target_house=new_target)
                         self.push_event(start_event)
             else:
                 home = agent.house_id
                 travel_time = self.travel_matrix[agent.location][home]
-                if travel_time is not None and travel_time > 0:
-                    future_time = self.time + travel_time
-                    start_event = StartTripEvent(time=future_time, agent_id=agent.id, target_house=home)
+                if travel_time is not None and travel_time >= 0:
+                    start_time = self.time
+                    start_event = StartTripEvent(time=start_time, agent_id=agent.id, target_house=home)
                     self.push_event(start_event)
 
     def run(self, max_time: int) -> List[str]:
@@ -480,19 +480,28 @@ class Environment:
         csv_log = []
 
         while self.event_queue and self.time <= max_time:
-            first_event = heapq.heappop(self.event_queue)
-            t = first_event.time
+            t = self.event_queue[0].time
             self.time = t
 
-            batch = [first_event]
-            while self.event_queue and self.event_queue[0].time == t:
-                batch.append(heapq.heappop(self.event_queue))
+            # Process all events at current t, including newly added ones
+            while self.event_queue and self.event_queue[0].time == self.time:
+                batch = []
+                while self.event_queue and self.event_queue[0].time == self.time:
+                    batch.append(heapq.heappop(self.event_queue))
 
-            finish_events, start_events, other_events, exchange_events = self._process_batch_events(batch)
+                if not batch:
+                    break
 
-            event_counter = self._log_events(finish_events, exchange_events, start_events, event_counter, csv_log)
+                # Sort batch by priority and process
+                batch.sort(key=lambda e: (EVENT_PRIORITY_FINISH_TRIP if isinstance(e, FinishTripEvent) else
+                                           EVENT_PRIORITY_EXCHANGE if hasattr(e, 'participant_ids') else
+                                           EVENT_PRIORITY_START_TRIP))
 
-            self._plan_new_trips(finish_events)
+                finish_events, start_events, other_events, exchange_events = self._process_batch_events(batch)
+                event_counter = self._log_events(finish_events, exchange_events, start_events, event_counter, csv_log)
+
+                # Plan new trips after processing (may add events at current t)
+                self._plan_new_trips(finish_events)
 
         return csv_log
 
