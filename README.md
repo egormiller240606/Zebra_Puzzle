@@ -234,7 +234,10 @@ house_id;color;dist_to_1;dist_to_2;dist_to_3;dist_to_4;dist_to_5;dist_to_6
 
 ## Пример и анализ лога
 
-АНАЛИЗ ЛОГА   1;0;StartTrip;Russian;1;6
+```
+АНАЛИЗ ЛОГА
+
+1;0;StartTrip;Russian;1;6
 2;0;StartTrip;Chinese;3;5
 3;0;StartTrip;American;6;1
 4;0;StartTrip;French;5;6
@@ -267,6 +270,7 @@ house_id;color;dist_to_1;dist_to_2;dist_to_3;dist_to_4;dist_to_5;dist_to_6
 31;10;StartTrip;German;1;4
 32;11;FinishTrip;English;2
 33;11;StartTrip;English;2;1
+
 ---- KNOWLEDGE ----
 1;{1: {'pet': 'Humpster', 'house': 3, 'location': 5, 't': 10}, 2: {'pet': 'Cat', 'house': 2, 'location': 1, 't': 5}, 5: {'pet': 'Zebra', 'house': 1, 'location': 5, 't': 10}, 3: {'pet': 'Dog', 'house': 5, 'location': 5, 't': 8}}
 2;{2: {'pet': 'Cat', 'house': 2, 'location': 2, 't': 0}, 1: {'pet': 'Dog', 'house': 1, 'location': 1, 't': 5}}
@@ -274,6 +278,7 @@ house_id;color;dist_to_1;dist_to_2;dist_to_3;dist_to_4;dist_to_5;dist_to_6
 4;{4: {'pet': 'Fish', 'house': 4, 'location': 4, 't': 0}, 1: {'pet': 'Dog', 'house': 1, 'location': 1, 't': 10}}
 5;{5: {'pet': 'Zebra', 'house': 1, 'location': 5, 't': 10}, 1: {'pet': 'Humpster', 'house': 3, 'location': 5, 't': 10}, 3: {'pet': 'Dog', 'house': 5, 'location': 5, 't': 8}}
 6;{6: {'pet': 'Bear', 'house': 6, 'location': 6, 't': 0}}
+```
 
 * Russian (дом 1 → после обмена дом 3):
 * 1;0;StartTrip;Russian;1;6 (начало).
