@@ -271,15 +271,6 @@ class ChangeHouseEvent(Event):
             for participant_id in self.participant_ids:
                 witness.update_knowledge(env.agents[participant_id], self.time)
 
-        # Plan trips for participants if needed (for transparency)
-        for agent_id in self.participant_ids:
-            agent = env.agents[agent_id]
-            if agent.location != agent.house_id:
-                travel_time = env.travel_matrix[agent.location][agent.house_id]
-                if travel_time is not None and travel_time >= 0:
-                    start_event = StartTripEvent(time=self.time, agent_id=agent.id, target_house=agent.house_id)
-                    env.push_event(start_event)
-
         return self.participant_ids, []
 
     def to_log_csv(self, event_number: int, env: 'Environment') -> str:
