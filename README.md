@@ -11,28 +11,42 @@
 
 ## Установка и запуск
 
-1. Убедитесь, что файлы данных находятся в той же директории:
-   - `zebra-01.csv` - инициализация агентов и домов
-   - `ZEBRA-strategies.csv` - стратегии агентов
-   - `ZEBRA-geo.csv` - матрица расстояний
+1. Убедитесь, что файлы данных находятся в директории `data/`:
+    - `data/zebra-01.csv` - инициализация агентов и домов
+    - `data/ZEBRA-strategies.csv` - стратегии агентов
+    - `data/ZEBRA-geo.csv` - матрица расстояний
 
 2. Запустите симуляцию:
-   ```bash
-   python Simulation.py
-   ```
+    ```bash
+    python Simulation.py
+    ```
 
 3. Вывод:
-   - CSV-лог событий в stdout
-   - Финальные знания агентов
+    - CSV-лог событий сохраняется в `data/simulation_log.csv`
+    - Финальные знания агентов
+    - График нарастающего итога событий сохраняется в `data/cumulative_events_gpaph.png`
+
+## Анализ результатов симуляции
+
+Для анализа результатов симуляции используйте скрипт `log_analyzer.py`:
+
+```bash
+python log_analyzer.py
+```
+
+Анализатор предоставляет:
+- Сводный отчет по симуляции (количество событий, распределение по типам, статистика поездок и обменов)
+- График нарастающего итога событий по типам
+- Анализ эволюции знаний агентов
 
 ## Структура файлов данных
 
-### zebra-01.csv
+### data/zebra-01.csv
 Инициализация агентов и домов. Формат:
 ```
 house_id;color;nation;drink;smoke;pet
 1;Red;Russian;Water;Marlboro;Dog
-2;Green;English;Beer;Pall Mall;Cat
+2;Blue;English;Beer;Pall Mall;Cat
 ...
 ```
 
@@ -43,7 +57,7 @@ house_id;color;nation;drink;smoke;pet
 - `smoke`: марка сигарет
 - `pet`: питомец
 
-### ZEBRA-strategies.csv
+### data/ZEBRA-strategies.csv
 Стратегии поведения агентов. Формат:
 ```
 agent_id;nation;route_prob1;route_prob2;route_prob3;route_prob4;route_prob5;route_prob6;house_exch_prob;pet_exch_prob
@@ -55,7 +69,7 @@ agent_id;nation;route_prob1;route_prob2;route_prob3;route_prob4;route_prob5;rout
 - `house_exch_prob`: вероятность обмена домами (%)
 - `pet_exch_prob`: вероятность обмена питомцами (%)
 
-### ZEBRA-geo.csv
+### data/ZEBRA-geo.csv
 Матрица расстояний между домами. Формат:
 ```
 house_id;color;dist_to_1;dist_to_2;dist_to_3;dist_to_4;dist_to_5;dist_to_6
@@ -201,12 +215,10 @@ house_id;color;dist_to_1;dist_to_2;dist_to_3;dist_to_4;dist_to_5;dist_to_6
 ```python
 {
     agent_id: {
-        "nationality": str,
-        "drink": str,
-        "cigarettes": str,
         "pet": str,
         "house": int,
-        "location": int
+        "location": int,
+        "t": int  # timestamp последнего обновления
     }
 }
 ```
@@ -215,6 +227,7 @@ house_id;color;dist_to_1;dist_to_2;dist_to_3;dist_to_4;dist_to_5;dist_to_6
 - Обновляется при встречах с владельцами домов
 - Обновляется при обменах питомцами (все присутствующие узнают новые питомцы участников)
 - Обновляется при обменах домами (все присутствующие узнают новые дома участников)
+- Каждый элемент знаний содержит timestamp последнего обновления
 
 
 ### StartTrip
@@ -228,103 +241,34 @@ house_id;color;dist_to_1;dist_to_2;dist_to_3;dist_to_4;dist_to_5;dist_to_6
 ### ChangePet
 `event_number;time;ChangePet;qty_participants;nat1;nat2;[nat3];pet1;pet2;[pet3]`
 
-### ChangeHouse
+### changeHouse
 `event_number;time;changeHouse;qty_participants;nat1;nat2;[nat3];house1;house2;[house3]`
 
 
 ## Пример и анализ лога
 
-```
-АНАЛИЗ ЛОГА
+Лог симуляции содержит тысячи событий и показывает сложную динамику обменов между агентами. Вот пример типичного фрагмента с обменами:
 
-1;0;StartTrip;Russian;1;6
+```
+6370 примеров событий (до времени 2000)
+
+Примеры событий:
+1;0;StartTrip;Russian;1;3
 2;0;StartTrip;Chinese;3;5
-3;0;StartTrip;American;6;1
-4;0;StartTrip;French;5;6
-5;0;StartTrip;English;2;1
-6;0;StartTrip;German;4;1
-7;1;FinishTrip;0;Russian;6
-8;1;StartTrip;Russian;6;1
-9;2;FinishTrip;0;American;3
-10;2;FinishTrip;0;German;1
-11;2;FinishTrip;0;Chinese;5
-12;2;StartTrip;German;1;4
-13;4;FinishTrip;German;4
-14;4;StartTrip;German;4;1
-15;5;FinishTrip;Russian;1
-16;5;FinishTrip;1;English;1
-17;5;FinishTrip;0;French;6
-18;5;StartTrip;Russian;1;5
-19;5;StartTrip;English;1;2
-20;5;StartTrip;French;6;5
-21;6;FinishTrip;0;German;1
-22;6;StartTrip;German;1;4
-23;8;FinishTrip;0;Russian;5
-24;8;FinishTrip;1;French;5
-25;8;FinishTrip;German;4
-26;8;ChangePet;2;Russian;Chinese;Zebra;Dog
-27;8;changeHouse;3;Russian;Chinese;French;3;5;1
-28;8;StartTrip;German;4;1
-29;10;FinishTrip;0;German;1
-30;10;ChangePet;2;Russian;French;Humpster;Zebra
-31;10;StartTrip;German;1;4
-32;11;FinishTrip;English;2
-33;11;StartTrip;English;2;1
+...
+41;12;changeHouse;2;German;French;5;4
+76;21;ChangePet;2;English;Chinese;Zebra;Cat
+272;88;ChangePet;2;Russian;German;Fish;Dog
+591;188;changeHouse;2;French;American;2;6
+...
 
 ---- KNOWLEDGE ----
-1;{1: {'pet': 'Humpster', 'house': 3, 'location': 5, 't': 10}, 2: {'pet': 'Cat', 'house': 2, 'location': 1, 't': 5}, 5: {'pet': 'Zebra', 'house': 1, 'location': 5, 't': 10}, 3: {'pet': 'Dog', 'house': 5, 'location': 5, 't': 8}}
-2;{2: {'pet': 'Cat', 'house': 2, 'location': 2, 't': 0}, 1: {'pet': 'Dog', 'house': 1, 'location': 1, 't': 5}}
-3;{3: {'pet': 'Dog', 'house': 5, 'location': 5, 't': 8}, 5: {'pet': 'Zebra', 'house': 1, 'location': 5, 't': 10}, 1: {'pet': 'Humpster', 'house': 3, 'location': 5, 't': 10}}
-4;{4: {'pet': 'Fish', 'house': 4, 'location': 4, 't': 0}, 1: {'pet': 'Dog', 'house': 1, 'location': 1, 't': 10}}
-5;{5: {'pet': 'Zebra', 'house': 1, 'location': 5, 't': 10}, 1: {'pet': 'Humpster', 'house': 3, 'location': 5, 't': 10}, 3: {'pet': 'Dog', 'house': 5, 'location': 5, 't': 8}}
-6;{6: {'pet': 'Bear', 'house': 6, 'location': 6, 't': 0}}
+1;{1: {'pet': 'Dog', 'house': 2, 'location': 2, 't': 1921}, 4: {'pet': 'Humpster', 'house': 5, 'location': 6, 't': 1829}, 2: {'pet': 'Cat', 'house': 4, 'location': 2, 't': 1921}, 5: {'pet': 'Fish', 'house': 6, 'location': 6, 't': 1919}, 6: {'pet': 'Dog', 'house': 1, 'location': 1, 't': 1868}, 3: {'pet': 'Dog', 'house': 3, 'location': 1, 't': 1576}}
+2;{2: {'pet': 'Zebra', 'house': 1, 'location': 1, 't': 1976}, 3: {'pet': 'Cat', 'house': 3, 'location': 5, 't': 1305}, 4: {'pet': 'Fish', 'house': 6, 'location': 1, 't': 1987}, 5: {'pet': 'Humpster', 'house': 5, 'location': 5, 't': 1686}, 1: {'pet': 'Dog', 'house': 2, 'location': 2, 't': 1921}, 6: {'pet': 'Cat', 'house': 4, 'location': 1, 't': 1976}}
+...
 ```
 
-* Russian (дом 1 → после обмена дом 3):
-* 1;0;StartTrip;Russian;1;6 (начало).
-* 15;5;FinishTrip;Russian;1 (вернулся домой).
-* 18;5;StartTrip;Russian;1;5 (новая поездка).
-* 23;8;FinishTrip;0;Russian;5 (прибыл в 5, success=0).
-* 27;8;changeHouse;3;Russian;Chinese;French;3;5;1 (обмен: Russian получает дом 3).
-* После обмена: location=5, house=3 → планирует поездку в 3 (но лог обрывается).
-* Знания: знает house=3 (себя), house=1 (French), house=5 (Chinese).
-
-* English (дом 2):
-* 5;0;StartTrip;English;2;1 (начало).
-* 16;5;FinishTrip;1;English;1 (прибыл в 1, success=1, встретил Russian).
-* 19;5;StartTrip;English;1;2 (новая).
-* 32;11;FinishTrip;English;2 (вернулся домой).
-
-* Chinese (дом 3 → после обмена дом 5):
-* 2;0;StartTrip;Chinese;3;5 (начало).
-* 11;2;FinishTrip;0;Chinese;5 (прибыл в 5).
-* 27;8;changeHouse;3;Russian;Chinese;French;3;5;1 (обмен: Chinese получает дом 5).
-* Знания: знает house=5 (себя), house=1 (French), house=3 (Russian).
-
-* German (дом 4):
-* 6;0;StartTrip;German;4;1 (начало).
-* 10;2;FinishTrip;0;German;1 (прибыл в 1).
-* 12;2;StartTrip;German;1;4 (возвращение).
-* 13;4;FinishTrip;German;4 (вернулся домой).
-* 14;4;StartTrip;German;4;1 (новая).
-* 21;6;FinishTrip;0;German;1 (прибыл в 1).
-* 22;6;StartTrip;German;1;4 (возвращение).
-* 25;8;FinishTrip;German;4 (вернулся домой).
-* 28;8;StartTrip;German;4;1 (новая).
-* 29;10;FinishTrip;0;German;1 (прибыл в 1).
-* 31;10;StartTrip;German;1;4 (возвращение).
-
-* French (дом 5 → после обмена дом 1):
-* 4;0;StartTrip;French;5;6 (начало).
-* 17;5;FinishTrip;0;French;6 (прибыл в 6).
-* 20;5;StartTrip;French;6;5 (возвращение).
-* 24;8;FinishTrip;1;French;5 (прибыл в 5, success=1).
-* 27;8;changeHouse;3;Russian;Chinese;French;3;5;1 (обмен: French получает дом 1).
-* Знания: знает house=1 (себя), house=3 (Russian), house=5 (Chinese).
-
-* American (дом 6):
-* 3;0;StartTrip;American;6;1 (начало).
-* 9;2;FinishTrip;0;American;3 (прибыл в 3).
+Агенты активно обмениваются домами и питомцами, что приводит к сложной сети знаний. Каждый агент знает информацию о других участниках обменов, включая timestamp последнего обновления.
 
 ## Детали реализации
 
