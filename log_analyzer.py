@@ -133,7 +133,7 @@ class SimulationAnalyzer:
         plt.xlim(left=0)
         plt.ylim(bottom=0)
         plt.tight_layout()
-        plt.savefig('cumulative_events_by_type.png', dpi=300, bbox_inches='tight')
+        plt.savefig('data/cumulative_events_by_type.png', dpi=300, bbox_inches='tight')
     
     def create_summary_report(self):
         """Создает сводный отчет по симуляции"""
