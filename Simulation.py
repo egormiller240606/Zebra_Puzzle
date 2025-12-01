@@ -598,7 +598,7 @@ if __name__ == "__main__":
     T = load_geography("data/ZEBRA-geo.csv")
 
     env = Environment(agents, houses, T)
-    log = env.run(max_time=10)
+    log = env.run(max_time=2000)
 
     with open("data/simulation_log.csv", "w", encoding="utf-8") as f:
         for entry in log:
