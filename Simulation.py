@@ -15,9 +15,9 @@ def parse_csv_line(line: str) -> Optional[List[str]]:
     return line.split(';')
 
 # Format a log entry for CSV output
-def log_formatter(event_number: int, time: int, event_type: str, **kwargs: Any) -> str:
-    extra = ";".join(str(v) for v in kwargs.values())
-    return f"{event_number};{time};{event_type};{extra}"
+def log_formatter(event_number: int, time: int, event_type: str, *extra: Any) -> str:
+    extra_str = ";".join(str(v) for v in extra)
+    return f"{event_number};{time};{event_type};{extra_str}"
 
 # Load agent strategies from CSV file
 def load_strategies(path_to_strategies: str) -> Dict[int, Dict[str, Any]]:
@@ -133,8 +133,6 @@ class Agent:
         self.house_id = house_id
         self.location = house_id
         self.is_travelling = False
-        self.travel_target = None
-        self.travel_finish_time = None
 
         self.route_probs = route_probs
         self.house_exchange_prob = house_exchange_prob
@@ -273,20 +271,10 @@ class ChangeHouseEvent(Event):
 
         return self.participant_ids, []
 
-    def to_log_csv(self, event_number: int, env: 'Environment') -> str:
+    def get_log_data(self, env: 'Environment') -> Tuple[str, List[Any]]:
         nationalities = [env.agents[agent_id].nationality for agent_id in self.participant_ids]
-
-        parts = [
-            str(event_number),
-            str(self.time),
-            "changeHouse",
-            str(self.qty_participants)
-        ]
-
-        parts.extend(nationalities)
-        parts.extend(map(str, self.houses_after_exchange))
-
-        return ";".join(parts)
+        extra = [self.qty_participants] + nationalities + list(map(str, self.houses_after_exchange))
+        return "changeHouse", extra
 
 # Event for finishing a trip
 class FinishTripEvent(Event):
@@ -340,13 +328,12 @@ class FinishTripEvent(Event):
 
         return ChangeHouseEvent(time=self.time, participant_ids=participants, houses_after_exchange=houses_after_exchange)
 
-    def to_log_csv(self, event_number: int, env: 'Environment') -> str:
+    def get_log_data(self, env: 'Environment') -> Tuple[str, List[Any]]:
         agent = env.agents[self.agent_id]
-
         if self.target_house == agent.house_id:
-            return f"{event_number};{self.time};FinishTrip;{agent.nationality};{self.target_house}"
+            return "FinishTrip", [agent.nationality, self.target_house]
         else:
-            return f"{event_number};{self.time};FinishTrip;{self.success};{agent.nationality};{self.target_house}"
+            return "FinishTrip", [self.success, agent.nationality, self.target_house]
 
 # Event for starting a trip
 class StartTripEvent(Event):
@@ -363,12 +350,10 @@ class StartTripEvent(Event):
             env.houses[agent.location].leave(agent.id)
 
         agent.is_travelling = True
-        agent.travel_target = self.target_house
 
         travel_time = env.travel_matrix[agent.location][self.target_house]
         if travel_time is None or travel_time < 0:  # Changed from <= 0 to < 0
             agent.is_travelling = False
-            agent.travel_target = None
             return [], []
 
         arrival_time = self.time + travel_time
@@ -377,9 +362,9 @@ class StartTripEvent(Event):
 
         return [agent.id], []
 
-    def to_log_csv(self, event_number: int, env: 'Environment') -> str:
+    def get_log_data(self, env: 'Environment') -> Tuple[str, List[Any]]:
         agent = env.agents[self.agent_id]
-        return f"{event_number};{self.time};StartTrip;{agent.nationality};{agent.location};{self.target_house}"
+        return "StartTrip", [agent.nationality, agent.location, self.target_house]
 
 # Event for exchanging pets
 class ChangePetEvent(Event):
@@ -410,20 +395,10 @@ class ChangePetEvent(Event):
 
         return self.participant_ids, []
 
-    def to_log_csv(self, event_number: int, env: 'Environment') -> str:
+    def get_log_data(self, env: 'Environment') -> Tuple[str, List[Any]]:
         nationalities = [env.agents[agent_id].nationality for agent_id in self.participant_ids]
-
-        parts = [
-            str(event_number),
-            str(self.time),
-            "ChangePet",
-            str(self.qty_participants)
-        ]
-
-        parts.extend(nationalities)
-        parts.extend(self.pets_after_exchange)
-
-        return ";".join(parts)
+        extra = [self.qty_participants] + nationalities + self.pets_after_exchange
+        return "ChangePet", extra
 
 # Environment class managing the simulation
 class Environment:
@@ -433,7 +408,6 @@ class Environment:
         self.travel_matrix = travel_matrix
         self.time = 0
         self.event_queue: List[Event] = []
-        self.log: List[str] = []
         self.house_exchange_events: List[ChangeHouseEvent] = []
 
         self.color_to_prob_index = build_color_to_prob_index(houses)
@@ -450,12 +424,6 @@ class Environment:
 
     def push_event(self, event: Event) -> None:
         heapq.heappush(self.event_queue, event)
-
-    def pop_all_events_with_time(self, t: int) -> List[Event]:
-        events = []
-        while self.event_queue and self.event_queue[0].time == t:
-            events.append(heapq.heappop(self.event_queue))
-        return events
 
     def detect_and_generate_exchanges(self) -> List[ChangePetEvent]:
         exchange_events = []
@@ -522,22 +490,11 @@ class Environment:
         return finish_events, start_events, other_events, exchange_events
 
     def _log_events(self, finish_events: List[FinishTripEvent], exchange_events: List[ChangePetEvent], house_exchange_events: List[ChangeHouseEvent], start_events: List[StartTripEvent], event_counter: int, csv_log: List[str]) -> int:
-        for event in finish_events:
-            csv_log.append(event.to_log_csv(event_counter, self))
+        all_events = finish_events + exchange_events + house_exchange_events + start_events
+        for event in all_events:
+            event_type, extra = event.get_log_data(self)
+            csv_log.append(log_formatter(event_counter, event.time, event_type, *extra))
             event_counter += 1
-
-        for event in exchange_events:
-            csv_log.append(event.to_log_csv(event_counter, self))
-            event_counter += 1
-
-        for event in house_exchange_events:
-            csv_log.append(event.to_log_csv(event_counter, self))
-            event_counter += 1
-
-        for event in start_events:
-            csv_log.append(event.to_log_csv(event_counter, self))
-            event_counter += 1
-
         return event_counter
 
     def _plan_new_trips(self, finish_events: List[FinishTripEvent]) -> None:
