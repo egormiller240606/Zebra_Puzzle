@@ -357,6 +357,10 @@ class StartTripEvent(Event):
             return [], []
 
         arrival_time = self.time + travel_time
+        if arrival_time > env.max_time:
+            agent.is_travelling = False
+            return [], []
+
         finish_event = FinishTripEvent(arrival_time, agent.id, self.target_house)
         env.push_event(finish_event)
 
@@ -402,10 +406,11 @@ class ChangePetEvent(Event):
 
 # Environment class managing the simulation
 class Environment:
-    def __init__(self, agents: Dict[int, Agent], houses: Dict[int, House], travel_matrix: List[List[Optional[int]]]):
+    def __init__(self, agents: Dict[int, Agent], houses: Dict[int, House], travel_matrix: List[List[Optional[int]]], max_time: int):
         self.agents = agents
         self.houses = houses
         self.travel_matrix = travel_matrix
+        self.max_time = max_time
         self.time = 0
         self.event_queue: List[Event] = []
         self.house_exchange_events: List[ChangeHouseEvent] = []
@@ -554,8 +559,9 @@ if __name__ == "__main__":
     agents, houses = load_initial_data("data/zebra-01.csv", strategies=strategies)
     T = load_geography("data/ZEBRA-geo.csv")
 
-    env = Environment(agents, houses, T)
-    log = env.run(max_time=2000)
+    max_time = 2000
+    env = Environment(agents, houses, T, max_time)
+    log = env.run(max_time)
 
     with open("data/simulation_log.csv", "w", encoding="utf-8") as f:
         for entry in log:
