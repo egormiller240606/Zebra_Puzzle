@@ -555,15 +555,15 @@ class Environment:
         return csv_log
 
 if __name__ == "__main__":
-    strategies = load_strategies("data/ZEBRA-strategies.csv")
-    agents, houses = load_initial_data("data/zebra-01.csv", strategies=strategies)
-    T = load_geography("data/ZEBRA-geo.csv")
+    strategies = load_strategies("data/input_data/ZEBRA-strategies.csv")
+    agents, houses = load_initial_data("data/input_data/zebra-01.csv", strategies=strategies)
+    T = load_geography("data/input_data/ZEBRA-geo.csv")
 
     max_time = 2000
     env = Environment(agents, houses, T, max_time)
     log = env.run(max_time)
 
-    with open("data/simulation_log.csv", "w", encoding="utf-8") as f:
+    with open("data/output_data/simulation_log.csv", "w", encoding="utf-8") as f:
         for entry in log:
             f.write(entry + "\n")
         f.write("---- KNOWLEDGE ----\n")
