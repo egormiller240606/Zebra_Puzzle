@@ -1,7 +1,11 @@
 import random
-from typing import Tuple, Optional, List, Any
+from typing import TYPE_CHECKING, Tuple, Optional, List, Any
 
 from .base import Event, EVENT_PRIORITY_FINISH_TRIP, EVENT_PRIORITY_EXCHANGE, EVENT_PRIORITY_START_TRIP
+
+if TYPE_CHECKING:
+    from simulation.environment import Environment
+    from entities.house import House
 
 
 class StartTripEvent(Event):

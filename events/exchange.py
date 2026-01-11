@@ -1,6 +1,9 @@
-from typing import Tuple, Optional, List, Any
+from typing import TYPE_CHECKING, Tuple, Optional, List, Any
 
 from .base import Event
+
+if TYPE_CHECKING:
+    from simulation.environment import Environment
 
 
 class ChangeHouseEvent(Event):

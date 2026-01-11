@@ -1,4 +1,7 @@
-from typing import Tuple, Optional, List, Any
+from typing import TYPE_CHECKING, Tuple, Optional, List, Any
+
+if TYPE_CHECKING:
+    from simulation.environment import Environment
 
 
 # Constants for event priorities in simulation
