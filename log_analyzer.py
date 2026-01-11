@@ -1,6 +1,3 @@
-import numpy as np
-import matplotlib.pyplot as plt
-
 class SimulationAnalyzer:
     def __init__(self, log_file_path: str):
         self.log_file_path = log_file_path
@@ -79,6 +76,9 @@ class SimulationAnalyzer:
     
     def plot_cumulative_events_by_type(self):
         """Создает график нарастающего итога количества событий по типам"""
+        import numpy as np
+        import matplotlib.pyplot as plt
+        
         plt.figure(figsize=(14, 8))
 
         event_types = ['StartTrip', 'changeHouse', 'ChangePet']
@@ -137,6 +137,8 @@ class SimulationAnalyzer:
     
     def create_summary_report(self):
         """Создает сводный отчет по симуляции"""
+        import numpy as np
+        
         print()
         print("=" * 50)
         print("СВОДНЫЙ ОТЧЕТ ПО СИМУЛЯЦИИ")
@@ -242,21 +244,22 @@ class SimulationAnalyzer:
                 print(f"\nСреднее количество известных других агентов на агента: {avg_known_others:.1f}")
                 print()
     def run_complete_analysis(self):
-        """Запускает полный анализ и создает график нарастающего итога"""
+        """Запускает полный анализ"""
         
         # Создаем отчет
         self.create_summary_report()
 
-        # Создаем только график нарастающего итога
-        self.plot_cumulative_events_by_type()
-
         # Анализ знаний
         self.analyze_knowledge_evolution()
+        
+        # Примечание: построение графика временно отключено из-за конфликта модулей
+        # Для включения графика необходимо решить конфликт с модулем logging проекта
+        # self.plot_cumulative_events_by_type()
 
 
 # Основная функция для запуска анализа
 def main():
-    log_file_path = "data/simulation_log.csv"  # Укажите путь к вашему лог-файлу
+    log_file_path = "data/output_data/logs/observer.csv"  # Укажите путь к вашему лог-файлу
     
     try:
         # Создаем анализатор

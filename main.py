@@ -1,4 +1,7 @@
 import os
+
+from log_analyzer import SimulationAnalyzer
+
 from loaders.csv_utils import load_strategies, load_initial_data, load_geography
 from simulation.environment import Environment
 
@@ -17,7 +20,8 @@ if __name__ == "__main__":
     output_dir = os.path.join(base_dir, "data/output_data/logs")
     os.makedirs(output_dir, exist_ok=True)
 
-    with open(os.path.join(output_dir, "observer.csv"), "w", encoding="utf-8") as f:
+    log_file_path = os.path.join(output_dir, "observer.csv")
+    with open(log_file_path, "w", encoding="utf-8") as f:
         for entry in log:
             f.write(entry + "\n")
         f.write("---- KNOWLEDGE ----\n")
@@ -26,3 +30,8 @@ if __name__ == "__main__":
 
     # Close all agent log files
     envi.agent_knowledge_logger.close_all()
+
+    # Run log analysis
+    analyzer = SimulationAnalyzer(log_file_path)
+    analyzer.run_complete_analysis()
+
