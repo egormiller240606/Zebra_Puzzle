@@ -563,7 +563,7 @@ if __name__ == "__main__":
     env = Environment(agents, houses, T, max_time)
     log = env.run(max_time)
 
-    with open("data/output_data/simulation_log.csv", "w", encoding="utf-8") as f:
+    with open("data/output_data/logs/observer.csv", "w", encoding="utf-8") as f:
         for entry in log:
             f.write(entry + "\n")
         f.write("---- KNOWLEDGE ----\n")
