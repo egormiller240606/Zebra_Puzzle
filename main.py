@@ -1,0 +1,28 @@
+import os
+from loaders.csv_utils import load_strategies, load_initial_data, load_geography
+from simulation.environment import Environment
+
+
+if __name__ == "__main__":
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    strategies = load_strategies(os.path.join(base_dir, "data/input_data/ZEBRA-strategies.csv"))
+    agents, houses = load_initial_data(os.path.join(base_dir, "data/input_data/zebra-01.csv"), strategies=strategies)
+    T = load_geography(os.path.join(base_dir, "data/input_data/ZEBRA-geo.csv"))
+
+    max_time = 2000
+    envi = Environment(agents, houses, T, max_time)
+    log = envi.run(max_time)
+
+    output_dir = os.path.join(base_dir, "data/output_data/logs")
+    os.makedirs(output_dir, exist_ok=True)
+
+    with open(os.path.join(output_dir, "observer.csv"), "w", encoding="utf-8") as f:
+        for entry in log:
+            f.write(entry + "\n")
+        f.write("---- KNOWLEDGE ----\n")
+        for a in envi.agents.values():
+            f.write(f"{a.id};{a.knowledge}\n")
+
+    # Close all agent log files
+    envi.agent_knowledge_logger.close_all()
