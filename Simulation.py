@@ -1,5 +1,6 @@
 import random
 import heapq
+import os
 from typing import Dict, List, Optional, Any, Tuple
 
 # Constants for event priorities in simulation
@@ -262,12 +263,19 @@ class ChangeHouseEvent(Event):
         for new_house_id, new_owner_id in zip(self.houses_after_exchange, self.participant_ids):
             env.houses[new_house_id].set_owner(new_owner_id)
 
-        # Update knowledge of all present agents (witnesses)
-        all_present = list(house.present_agents)
-        for witness_id in all_present:
+        # Update knowledge of all present agents (witnesses) and log changes
+        for witness_id in list(house.present_agents):
             witness = env.agents[witness_id]
             for participant_id in self.participant_ids:
                 witness.update_knowledge(env.agents[participant_id], self.time)
+            
+            # Log knowledge change
+            env.agent_knowledge_logger.log_knowledge_change(
+                time=self.time,
+                agent_id=witness_id,
+                event_type="changeHouse",
+                knowledge_after=witness.knowledge.copy()
+            )
 
         return self.participant_ids, []
 
@@ -299,6 +307,20 @@ class FinishTripEvent(Event):
                     other_agent = env.agents[other_id]
                     agent.update_knowledge(other_agent, self.time)
                     other_agent.update_knowledge(agent, self.time)
+                    
+                    # Log knowledge changes
+                    env.agent_knowledge_logger.log_knowledge_change(
+                        time=self.time,
+                        agent_id=agent.id,
+                        event_type="FinishTrip",
+                        knowledge_after=agent.knowledge.copy()
+                    )
+                    env.agent_knowledge_logger.log_knowledge_change(
+                        time=self.time,
+                        agent_id=other_id,
+                        event_type="FinishTrip",
+                        knowledge_after=other_agent.knowledge.copy()
+                    )
 
             # Detect and execute house exchange
             house_exchange_event = self.detect_house_exchange(env, house)
@@ -352,7 +374,7 @@ class StartTripEvent(Event):
         agent.is_travelling = True
 
         travel_time = env.travel_matrix[agent.location][self.target_house]
-        if travel_time is None or travel_time < 0:  # Changed from <= 0 to < 0
+        if travel_time is None or travel_time < 0:
             agent.is_travelling = False
             return [], []
 
@@ -391,11 +413,18 @@ class ChangePetEvent(Event):
             agent.knowledge[agent_id] = {**agent._get_agent_info(), "t": self.time}
             agent.last_update_time = self.time
 
-        all_present = list(house.present_agents)
-        for witness_id in all_present:
+        for witness_id in list(house.present_agents):
             witness = env.agents[witness_id]
             for participant_id in self.participant_ids:
                 witness.update_knowledge(env.agents[participant_id], self.time)
+            
+            # Log knowledge change
+            env.agent_knowledge_logger.log_knowledge_change(
+                time=self.time,
+                agent_id=witness_id,
+                event_type="ChangePet",
+                knowledge_after=witness.knowledge.copy()
+            )
 
         return self.participant_ids, []
 
@@ -403,6 +432,39 @@ class ChangePetEvent(Event):
         nationalities = [env.agents[agent_id].nationality for agent_id in self.participant_ids]
         extra = [self.qty_participants] + nationalities + self.pets_after_exchange
         return "ChangePet", extra
+
+# Agent Knowledge Logger - creates separate CSV log for each agent
+class AgentKnowledgeLogger:
+    def __init__(self, log_dir: str = "data/output_data/logs"):
+        self.log_dir = log_dir
+        self.log_files: Dict[int, Any] = {}
+        
+        # Create directory if it doesn't exist
+        os.makedirs(self.log_dir, exist_ok=True)
+    
+    def _get_log_file(self, agent_id: int):
+        """Get or create log file for agent"""
+        if agent_id not in self.log_files:
+            log_path = os.path.join(self.log_dir, f"agent_{agent_id}_knowledge.log")
+            self.log_files[agent_id] = open(log_path, 'w', encoding='utf-8')
+            # Write header
+            self.log_files[agent_id].write(f"# Agent {agent_id} Knowledge Log\n")
+            self.log_files[agent_id].write(f"# Format: time;event_type;knowledge\n")
+        return self.log_files[agent_id]
+    
+    def log_knowledge_change(self, time: int, agent_id: int, event_type: str, 
+                            knowledge_after: Dict[int, Dict[str, Any]]) -> None:
+        """Write agent knowledge change to CSV format"""
+        f = self._get_log_file(agent_id)
+        f.write(f"{time};{event_type};{knowledge_after}\n")
+        f.flush()
+    
+    def close_all(self):
+        """Close all open files"""
+        for f in self.log_files.values():
+            f.close()
+        self.log_files.clear()
+
 
 # Environment class managing the simulation
 class Environment:
@@ -414,6 +476,18 @@ class Environment:
         self.time = 0
         self.event_queue: List[Event] = []
         self.house_exchange_events: List[ChangeHouseEvent] = []
+
+        # Initialize logger for agents
+        self.agent_knowledge_logger = AgentKnowledgeLogger(log_dir="data/output_data/logs")
+        
+        # Log initial knowledge for all agents
+        for agent_id, agent in self.agents.items():
+            self.agent_knowledge_logger.log_knowledge_change(
+                time=0,
+                agent_id=agent_id,
+                event_type="INIT",
+                knowledge_after=agent.knowledge.copy()
+            )
 
         self.color_to_prob_index = build_color_to_prob_index(houses)
 
@@ -506,13 +580,13 @@ class Environment:
         for event in finish_events:
             agent = self.agents[event.agent_id]
             if agent.is_travelling:
-                continue  # Skip if already planning a trip (e.g., after house exchange)
+                continue
             if agent.location == agent.house_id:
                 new_target = agent.choose_trip_target(self.travel_matrix, self.houses, self.color_to_prob_index)
                 if new_target is not None:
                     travel_time = self.travel_matrix[agent.location][new_target]
-                    if travel_time is not None and travel_time >= 0:  # Allow zero travel time
-                        start_time = self.time  # Schedule at current time for instant processing
+                    if travel_time is not None and travel_time >= 0:
+                        start_time = self.time
                         start_event = StartTripEvent(time=start_time, agent_id=agent.id, target_house=new_target)
                         self.push_event(start_event)
             else:
@@ -531,7 +605,6 @@ class Environment:
             t = self.event_queue[0].time
             self.time = t
 
-            # Process all events at current t, including newly added ones
             while self.event_queue and self.event_queue[0].time == self.time:
                 batch = []
                 while self.event_queue and self.event_queue[0].time == self.time:
@@ -540,7 +613,6 @@ class Environment:
                 if not batch:
                     break
 
-                # Sort batch by priority and process
                 batch.sort(key=lambda e: (EVENT_PRIORITY_FINISH_TRIP if isinstance(e, FinishTripEvent) else
                                             EVENT_PRIORITY_EXCHANGE if hasattr(e, 'participant_ids') else
                                             EVENT_PRIORITY_START_TRIP))
@@ -549,10 +621,10 @@ class Environment:
                 event_counter = self._log_events(finish_events, exchange_events, self.house_exchange_events, start_events, event_counter, csv_log)
                 self.house_exchange_events.clear()
 
-                # Plan new trips after processing (may add events at current t)
                 self._plan_new_trips(finish_events)
 
         return csv_log
+
 
 if __name__ == "__main__":
     strategies = load_strategies("data/input_data/ZEBRA-strategies.csv")
@@ -560,12 +632,15 @@ if __name__ == "__main__":
     T = load_geography("data/input_data/ZEBRA-geo.csv")
 
     max_time = 2000
-    env = Environment(agents, houses, T, max_time)
-    log = env.run(max_time)
+    envi = Environment(agents, houses, T, max_time)
+    log = envi.run(max_time)
 
     with open("data/output_data/logs/observer.csv", "w", encoding="utf-8") as f:
         for entry in log:
             f.write(entry + "\n")
         f.write("---- KNOWLEDGE ----\n")
-        for a in env.agents.values():
+        for a in envi.agents.values():
             f.write(f"{a.id};{a.knowledge}\n")
+    
+    # Close all agent log files
+    envi.agent_knowledge_logger.close_all()
