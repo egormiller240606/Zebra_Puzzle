@@ -133,7 +133,7 @@ class SimulationAnalyzer:
         plt.xlim(left=0)
         plt.ylim(bottom=0)
         plt.tight_layout()
-        plt.savefig('data/cumulative_events_gpaph.png', dpi=300, bbox_inches='tight')
+        plt.savefig('data/output_data/cumulative_events_gpaph.png', dpi=300, bbox_inches='tight')
     
     def create_summary_report(self):
         """Создает сводный отчет по симуляции"""
@@ -252,12 +252,9 @@ class SimulationAnalyzer:
         # Анализ знаний
         self.analyze_knowledge_evolution()
         
-        # Примечание: построение графика временно отключено из-за конфликта модулей
-        # Для включения графика необходимо решить конфликт с модулем logging проекта
-        # self.plot_cumulative_events_by_type()
-
-
-# Основная функция для запуска анализа
+        self.plot_cumulative_events_by_type()
+    
+# Основная функция
 def main():
     log_file_path = "data/output_data/logs/observer.csv"  # Укажите путь к вашему лог-файлу
     

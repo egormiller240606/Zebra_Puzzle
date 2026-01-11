@@ -2,7 +2,7 @@ import heapq
 from typing import Dict, List, Optional, Any, Tuple
 
 from loaders.csv_utils import build_color_to_prob_index
-from logging.knowledge_logger import AgentKnowledgeLogger
+from knowledge_logging.knowledge_logger import AgentKnowledgeLogger
 from events.base import Event
 from events.trip import FinishTripEvent, StartTripEvent
 from events.exchange import ChangePetEvent, ChangeHouseEvent

@@ -12,7 +12,7 @@ from events import (
     EVENT_PRIORITY_START_TRIP,
 )
 from simulation import Environment
-from logging import AgentKnowledgeLogger
+from knowledge_logging import AgentKnowledgeLogger
 from loaders import (
     parse_csv_line,
     log_formatter,
