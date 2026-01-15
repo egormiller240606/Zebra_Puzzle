@@ -28,9 +28,6 @@ if __name__ == "__main__":
         for a in envi.agents.values():
             f.write(f"{a.id};{a.knowledge}\n")
 
-    # Close all agent log files
-    envi.agent_knowledge_logger.close_all()
-
     # Run log analysis
     analyzer = SimulationAnalyzer(log_file_path)
     analyzer.run_complete_analysis()

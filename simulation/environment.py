@@ -2,7 +2,6 @@ import heapq
 from typing import Dict, List, Optional, Any, Tuple
 
 from loaders.csv_utils import build_color_to_prob_index
-from knowledge_logging.knowledge_logger import AgentKnowledgeLogger
 from events.base import Event
 from events.trip import FinishTripEvent, StartTripEvent
 from events.exchange import ChangePetEvent, ChangeHouseEvent
@@ -17,18 +16,6 @@ class Environment:
         self.time = 0
         self.event_queue: List[Event] = []
         self.house_exchange_events: List[ChangeHouseEvent] = []
-
-        # Initialize logger for agents
-        self.agent_knowledge_logger = AgentKnowledgeLogger(log_dir="data/output_data/logs")
-
-        # Log initial knowledge for all agents
-        for agent_id, agent in self.agents.items():
-            self.agent_knowledge_logger.log_knowledge_change(
-                time=0,
-                agent_id=agent_id,
-                event_type="INIT",
-                knowledge_after=agent.knowledge.copy()
-            )
 
         self.color_to_prob_index = build_color_to_prob_index(houses)
 
@@ -51,6 +38,10 @@ class Environment:
         exchange_events = []
 
         for house_id, house in self.houses.items():
+            # Only allow pet exchanges when owner is present (same as house exchanges)
+            if not house.is_owner_home():
+                continue
+
             present_agents = sorted(list(house.present_agents))
             if len(present_agents) < 2:
                 continue
@@ -82,13 +73,16 @@ class Environment:
     def _process_batch_events(self, batch: List[Event]) -> Tuple[List[FinishTripEvent], List[StartTripEvent], List[Event], List[ChangePetEvent]]:
         from events.base import EVENT_PRIORITY_FINISH_TRIP, EVENT_PRIORITY_EXCHANGE, EVENT_PRIORITY_START_TRIP
 
-        def event_priority(e: Event) -> int:
+        def event_priority(e: Event) -> Tuple[int, bool]:
             if isinstance(e, FinishTripEvent):
-                return EVENT_PRIORITY_FINISH_TRIP
+                # Хозяева (возвращающиеся домой) обрабатываются раньше туристов
+                # is_return_home=True -> (0, True) - обрабатывается первым
+                # is_return_home=False -> (0, False) - обрабатывается вторым
+                return (EVENT_PRIORITY_FINISH_TRIP, not e.is_return_home)
             elif hasattr(e, 'participant_ids'):
-                return EVENT_PRIORITY_EXCHANGE
+                return (EVENT_PRIORITY_EXCHANGE, False)
             else:
-                return EVENT_PRIORITY_START_TRIP
+                return (EVENT_PRIORITY_START_TRIP, False)
 
         batch.sort(key=event_priority)
 
@@ -162,9 +156,10 @@ class Environment:
                 if not batch:
                     break
 
-                batch.sort(key=lambda e: (EVENT_PRIORITY_FINISH_TRIP if isinstance(e, FinishTripEvent) else
-                                          EVENT_PRIORITY_EXCHANGE if hasattr(e, 'participant_ids') else
-                                          EVENT_PRIORITY_START_TRIP))
+                batch.sort(key=lambda e: (EVENT_PRIORITY_FINISH_TRIP,
+                                          not e.is_return_home if isinstance(e, FinishTripEvent) else False) if isinstance(e, FinishTripEvent) else
+                                          (EVENT_PRIORITY_EXCHANGE, False) if hasattr(e, 'participant_ids') else
+                                          (EVENT_PRIORITY_START_TRIP, False))
 
                 finish_events, start_events, other_events, exchange_events = self._process_batch_events(batch)
                 event_counter = self._log_events(finish_events, exchange_events, self.house_exchange_events, start_events, event_counter, csv_log)

@@ -33,7 +33,7 @@ class StartTripEvent(Event):
             agent.is_travelling = False
             return [], []
 
-        finish_event = FinishTripEvent(arrival_time, agent.id, self.target_house)
+        finish_event = FinishTripEvent(arrival_time, agent.id, self.target_house, agent.house_id)
         env.push_event(finish_event)
 
         return [agent.id], []
@@ -44,13 +44,18 @@ class StartTripEvent(Event):
 
 
 class FinishTripEvent(Event):
-    def __init__(self, time: int, agent_id: int, target_house: int):
+    def __init__(self, time: int, agent_id: int, target_house: int, agent_house_id: int):
         super().__init__(time, agent_id)
         self.target_house = target_house
         self.success = 0
+        # Определяем заранее, возвращается ли агент домой
+        self.is_return_home = (target_house == agent_house_id)
 
     def run(self, env: 'Environment') -> Tuple[List[int], List[int]]:
         agent = env.agents[self.agent_id]
+
+        # Определяем, возвращается ли агент домой ДО изменения location
+        self.is_return_home = (self.target_house == agent.house_id)
 
         agent.is_travelling = False
         agent.location = self.target_house
@@ -65,20 +70,6 @@ class FinishTripEvent(Event):
                     other_agent = env.agents[other_id]
                     agent.update_knowledge(other_agent, self.time)
                     other_agent.update_knowledge(agent, self.time)
-
-                    # Log knowledge changes
-                    env.agent_knowledge_logger.log_knowledge_change(
-                        time=self.time,
-                        agent_id=agent.id,
-                        event_type="FinishTrip",
-                        knowledge_after=agent.knowledge.copy()
-                    )
-                    env.agent_knowledge_logger.log_knowledge_change(
-                        time=self.time,
-                        agent_id=other_id,
-                        event_type="FinishTrip",
-                        knowledge_after=other_agent.knowledge.copy()
-                    )
 
             # Detect and execute house exchange
             house_exchange_event = self.detect_house_exchange(env, house)

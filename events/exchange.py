@@ -31,19 +31,11 @@ class ChangeHouseEvent(Event):
         for new_house_id, new_owner_id in zip(self.houses_after_exchange, self.participant_ids):
             env.houses[new_house_id].set_owner(new_owner_id)
 
-        # Update knowledge of all present agents (witnesses) and log changes
+        # Update knowledge of all present agents (witnesses)
         for witness_id in list(house.present_agents):
             witness = env.agents[witness_id]
             for participant_id in self.participant_ids:
                 witness.update_knowledge(env.agents[participant_id], self.time)
-
-            # Log knowledge change
-            env.agent_knowledge_logger.log_knowledge_change(
-                time=self.time,
-                agent_id=witness_id,
-                event_type="changeHouse",
-                knowledge_after=witness.knowledge.copy()
-            )
 
         return self.participant_ids, []
 
@@ -77,14 +69,6 @@ class ChangePetEvent(Event):
             witness = env.agents[witness_id]
             for participant_id in self.participant_ids:
                 witness.update_knowledge(env.agents[participant_id], self.time)
-
-            # Log knowledge change
-            env.agent_knowledge_logger.log_knowledge_change(
-                time=self.time,
-                agent_id=witness_id,
-                event_type="ChangePet",
-                knowledge_after=witness.knowledge.copy()
-            )
 
         return self.participant_ids, []
 
