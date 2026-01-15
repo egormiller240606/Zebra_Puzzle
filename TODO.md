@@ -1,0 +1,6 @@
+- [x] Убрать обновление знаний из FinishTripEvent.run
+- [x] Добавить метод update_knowledge_in_houses_with_owner в Environment
+- [x] Вызвать метод после обработки finish_events в _process_batch_events
+- [x] Изменить ChangeHouseEvent: обновлять знания всех присутствующих друг о друге
+- [x] Изменить ChangePetEvent: обновлять знания всех присутствующих друг о друге
+- [x] Протестировать симуляцию

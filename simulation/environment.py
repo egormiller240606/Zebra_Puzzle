@@ -70,7 +70,18 @@ class Environment:
 
         return exchange_events
 
-    def _process_batch_events(self, batch: List[Event]) -> Tuple[List[FinishTripEvent], List[StartTripEvent], List[Event], List[ChangePetEvent]]:
+    def update_knowledge_in_houses_with_owner(self, time: int) -> None:
+        for house in self.houses.values():
+            if house.is_owner_home():
+                present_agents = list(house.present_agents)
+                for agent_id in present_agents:
+                    agent = self.agents[agent_id]
+                    for other_id in present_agents:
+                        if other_id != agent_id:
+                            other_agent = self.agents[other_id]
+                            agent.update_knowledge(other_agent, time)
+
+    def _process_batch_events(self, batch: List[Event], time: int) -> Tuple[List[FinishTripEvent], List[StartTripEvent], List[Event], List[ChangePetEvent]]:
         from events.base import EVENT_PRIORITY_FINISH_TRIP, EVENT_PRIORITY_EXCHANGE, EVENT_PRIORITY_START_TRIP
 
         def event_priority(e: Event) -> Tuple[int, bool]:
@@ -92,6 +103,8 @@ class Environment:
 
         for event in finish_events:
             event.run(self)
+
+        self.update_knowledge_in_houses_with_owner(time)
 
         exchange_events = []
         if finish_events:
@@ -161,7 +174,7 @@ class Environment:
                                           (EVENT_PRIORITY_EXCHANGE, False) if hasattr(e, 'participant_ids') else
                                           (EVENT_PRIORITY_START_TRIP, False))
 
-                finish_events, start_events, other_events, exchange_events = self._process_batch_events(batch)
+                finish_events, start_events, other_events, exchange_events = self._process_batch_events(batch, self.time)
                 event_counter = self._log_events(finish_events, exchange_events, self.house_exchange_events, start_events, event_counter, csv_log)
                 self.house_exchange_events.clear()
 

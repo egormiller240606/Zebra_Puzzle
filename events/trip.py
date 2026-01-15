@@ -65,12 +65,6 @@ class FinishTripEvent(Event):
         self.success = 1 if house.is_owner_home() else 0
 
         if self.success == 1:
-            for other_id in list(house.present_agents):
-                if other_id != agent.id:
-                    other_agent = env.agents[other_id]
-                    agent.update_knowledge(other_agent, self.time)
-                    other_agent.update_knowledge(agent, self.time)
-
             # Detect and execute house exchange
             house_exchange_event = self.detect_house_exchange(env, house)
             if house_exchange_event:
