@@ -20,6 +20,9 @@ class ChangeHouseEvent(Event):
         house_id = first_participant.location
         house = env.houses[house_id]
 
+        if not house.is_owner_home():
+            return [], []
+
         # Update agent house_ids and house owners
         for agent_id, new_house_id in zip(self.participant_ids, self.houses_after_exchange):
             agent = env.agents[agent_id]
@@ -58,6 +61,9 @@ class ChangePetEvent(Event):
         first_participant = env.agents[self.participant_ids[0]]
         house_id = first_participant.location
         house = env.houses[house_id]
+
+        if not house.is_owner_home():
+            return [], []
 
         for agent_id, new_pet in zip(self.participant_ids, self.pets_after_exchange):
             agent = env.agents[agent_id]
