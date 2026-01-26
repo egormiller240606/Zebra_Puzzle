@@ -1,5 +1,5 @@
 # Logging module
-from .knowledge_logger import AgentKnowledgeLogger
+from .knowledge_logger import KnowledgeLogAnalyzer
 
-__all__ = ['AgentKnowledgeLogger']
+__all__ = [' KnowledgeLogAnalyzer']
 

@@ -258,7 +258,7 @@ class KnowledgeLogAnalyzer:
         for agent_id, knowledge in self.agents_knowledge.items():
             if self._knowledge_changed(agent_id, knowledge):
                 nationality = self.agents_metadata[agent_id]['nationality']
-                filename = os.path.join(self.output_dir, f"agent_{agent_id}_{nationality}_knowledge.log")
+                filename = os.path.join(self.output_dir, f"agent_{agent_id}_knowledge.log")
                 knowledge_str = str(knowledge).replace('\n', ' ').replace('\r', '')
                 with open(filename, 'a', encoding='utf-8') as f:
                     f.write(f"{time};{event_type};{knowledge_str}\n")
@@ -270,7 +270,7 @@ class KnowledgeLogAnalyzer:
     def generate_knowledge_logs(self) -> None:
         for agent_id in self.agents_knowledge:
             nationality = self.agents_metadata[agent_id]['nationality']
-            filename = os.path.join(self.output_dir, f"agent_{agent_id}_{nationality}_knowledge.log")
+            filename = os.path.join(self.output_dir, f"agent_{agent_id}_knowledge.log")
             with open(filename, 'w', encoding='utf-8') as f:
                 f.write(
                     f"0;INIT;{{{agent_id}: {{'pet': '{self.agents_metadata[agent_id]['pet']}', 'house': {agent_id}, 'location': {agent_id}, 't': 0}}}}\n")
