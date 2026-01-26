@@ -1,6 +1,7 @@
 import os
 
 from log_analyzer import SimulationAnalyzer
+from knowledge_logging.knowledge_logger import KnowledgeLogAnalyzer
 
 from loaders.csv_utils import load_strategies, load_initial_data, load_geography
 from simulation.environment import Environment
@@ -31,4 +32,11 @@ if __name__ == "__main__":
     # Run log analysis
     analyzer = SimulationAnalyzer(log_file_path)
     analyzer.run_complete_analysis()
+
+    knowledge = KnowledgeLogAnalyzer(
+    observer_log_path="data/output_data/logs/observer.csv",
+    agents_csv_path="data/input_data/zebra-01.csv",
+    output_dir="data/output_data/logs/"
+    )
+    knowledge.generate_knowledge_logs()
 
