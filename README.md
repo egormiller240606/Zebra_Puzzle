@@ -38,9 +38,9 @@
 | 1 | Russian | Red | Dog | Water | Marlboro |
 | 2 | English | Blue | Cat | Beer | Pall Mall |
 | 3 | Chinese | Yellow | Zebra | Juice | Dunhill |
-| 4 | German | Green | Fish | Whiskey | Kent |
-| 5 | French | White | Humpster | Vodka | Camel |
-| 6 | American | Black | Bear | Wine | Parliament |
+| 4 | German | Green | Fish | Wiskey | Kent |
+| 5 | French | White | Hamster | Vodka | Camel |
+| 6 | American | Black | Bear | Wine | Parlament |
 
 ### Масштабируемость
 
@@ -155,6 +155,13 @@ Zebra_Puzzle/
     │   ├── zebra-01.csv              # Агенты, дома, атрибуты
     │   ├── ZEBRA-geo.csv             # Матрица расстояний
     │   └── ZEBRA-strategies.csv      # Стратегии агентов
+    ├── other_data/
+    │   ├── circle_geo.csv            # Круговая география
+    │   ├── full_graph_geo.csv        # Полносвязная география
+    │   ├── random_geo.csv            # Случайная география
+    │   ├── random_strategies.csv     # Случайные стратегии
+    │   ├── star_geo.csv              # Звездная география
+    │   └── uniform_strategies.csv    # Равномерные стратегии
     └── output_data/
         ├── logs/
         │   ├── observer.csv          # Главный лог событий
@@ -219,8 +226,8 @@ Zebra_Puzzle/
 
 **Пример содержимого:**
 ```
-1;Russian;100;0;0;0;0;0;70;70
-2;English;30;10;10;25;25;0;50;50
+1;Russian;0;20;20;20;20;20;50;50
+2;English;20;0;20;20;20;20;50;50
 ```
 
 ---
@@ -244,7 +251,15 @@ Zebra_Puzzle/
 1;0;StartTrip;Russian;1;5
 2;5;FinishTrip;1;Russian;5
 3;5;changeHouse;2;Russian;English;2;1
-4;10;ChangePet;3;Chinese;German;French;Zebra;Fish;Humpster
+4;10;ChangePet;3;Chinese;German;French;Zebra;Fish;Hamster
+```
+
+После всех событий добавляется секция знаний агентов:
+
+```
+---- KNOWLEDGE ----
+1;{1: {'pet': 'Dog', 'house': 1, 'location': 1, 't': 0}, ...}
+2;{2: {'pet': 'Cat', 'house': 2, 'location': 2, 't': 0}, ...}
 ```
 
 ### agent_*_knowledge.log — Индивидуальные логи знаний
@@ -445,18 +460,14 @@ class ChangePetEvent(Event):
 
 ## Логирование и анализ
 
-### AgentKnowledgeLogger
+### KnowledgeLogAnalyzer
 
-Отслеживает изменения базы знаний каждого агента.
+Анализирует и логирует изменения базы знаний каждого агента.
 
 ```python
-class AgentKnowledgeLogger:
-    def log_knowledge_change(self, time: int, agent_id: int, 
-                             event_type: str, knowledge_after: dict):
-        """Логирует изменение знаний агента"""
-        
-    def close_all(self):
-        """Закрывает все файлы логов"""
+class KnowledgeLogAnalyzer:
+    def generate_knowledge_logs(self) -> None:
+        """Генерирует логи знаний агентов"""
 ```
 
 ### SimulationAnalyzer
@@ -472,14 +483,14 @@ class SimulationAnalyzer:
 ### Формат лога знаний
 
 ```
-TIME=0; EVENT=INIT
-  Agent 1 knowledge:
-  {1: {'pet': 'Dog', 'house': 1, 'location': 1, 't': 0}}
+time;event_type;knowledge_dict
+```
 
-TIME=5; EVENT=FinishTrip
-  Agent 1 knowledge:
-  {1: {'pet': 'Dog', 'house': 1, 'location': 5, 't': 5},
-   2: {'pet': 'Cat', 'house': 2, 'location': 2, 't': 5}}
+**Примеры:**
+
+```
+0;INIT;{1: {'pet': 'Dog', 'house': 1, 'location': 1, 't': 0}}
+5;FinishTrip;{1: {'pet': 'Dog', 'house': 1, 'location': 5, 't': 5}, 2: {'pet': 'Cat', 'house': 2, 'location': 2, 't': 5}}
 ```
 
 ---
