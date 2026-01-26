@@ -122,13 +122,12 @@ class SimulationAnalyzer:
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=12)
         plt.grid(True, alpha=0.3)
 
-        # Для больших временных диапазонов показываем только точки с событиями
-        unique_times = sorted(list(set(times)))
-        if len(unique_times) <= 20:  # Если мало уникальных времен, показываем все
-            plt.xticks(unique_times)
-        else:  # Если много времен, показываем каждое 5-е или адаптивно
-            step = max(1, len(unique_times) // 10)
-            plt.xticks(unique_times[::step])
+        # Устанавливаем метки времени кратными 100
+        min_time = int(np.min(times))
+        max_time = int(np.max(times))
+        rounded_max = ((max_time + 99) // 100) * 100
+        ticks = list(range(0, rounded_max + 1, 100))
+        plt.xticks(ticks)
 
         plt.xlim(left=0)
         plt.ylim(bottom=0)
@@ -243,6 +242,7 @@ class SimulationAnalyzer:
                 avg_known_others = total_known_others / len(self.knowledge_data)
                 print(f"\nСреднее количество известных других агентов на агента: {avg_known_others:.1f}")
                 print()
+
     def run_complete_analysis(self):
         """Запускает полный анализ"""
         
@@ -253,22 +253,5 @@ class SimulationAnalyzer:
         self.analyze_knowledge_evolution()
         
         self.plot_cumulative_events_by_type()
-    
-# Основная функция
-def main():
-    log_file_path = "data/output_data/logs/observer.csv"  # Укажите путь к вашему лог-файлу
-    
-    try:
-        # Создаем анализатор
-        analyzer = SimulationAnalyzer(log_file_path)
-        
-        # Запускаем полный анализ
-        analyzer.run_complete_analysis()
-        
-    except FileNotFoundError:
-        print(f"Файл {log_file_path} не найден!")
-    except Exception as e:
-        print(f"Произошла ошибка при анализе: {e}")
 
-if __name__ == "__main__":
-    main()
+

@@ -20,6 +20,8 @@ from loaders import (
     load_geography,
     build_color_to_prob_index,
 )
+from analysis import SimulationAnalyzer
+from knowledge_logging import KnowledgeLogAnalyzer
 
 __all__ = [
     # Entities
@@ -43,5 +45,8 @@ __all__ = [
     'load_initial_data',
     'load_geography',
     'build_color_to_prob_index',
+    # Analysis
+    'SimulationAnalyzer',
+    'KnowledgeLogAnalyzer',
 ]
 

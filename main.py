@@ -1,8 +1,7 @@
 import os
 
-from log_analyzer import SimulationAnalyzer
-from knowledge_logging.knowledge_logger import KnowledgeLogAnalyzer
-
+from analysis import SimulationAnalyzer
+from knowledge_logging import KnowledgeLogAnalyzer
 from loaders.csv_utils import load_strategies, load_initial_data, load_geography
 from simulation.environment import Environment
 
