@@ -80,10 +80,6 @@ for a in agents:
 
     ax.set_xlabel('Time (days)')
     ax.set_ylabel('M1 — Knowledge Completeness')
-    ax.set_title(
-        f'Unilateral Deviation Analysis: {nations[a]}\n'
-        f'(others remain on Baseline)'
-    )
     ax.legend(fontsize=9)
     ax.grid(True, alpha=0.3)
     ax.set_xlim(left=0)
@@ -167,8 +163,6 @@ ax.bar([i + 1.5*width for i in x], targ_finals,
 
 ax.set_xlabel('Agent')
 ax.set_ylabel('Final M1 (knowledge completeness)')
-ax.set_title('Unilateral Deviation: Final M1 per Agent\n'
-             '(each agent deviates alone, others stay on Baseline)')
 ax.set_xticks(list(x))
 ax.set_xticklabels([nations[a] for a in agents])
 ax.legend(fontsize=9)
@@ -241,8 +235,6 @@ ax.bar([i + 1.5*width for i in x], targ_m6,
 
 ax.set_xlabel('Agent')
 ax.set_ylabel('Final M6 (prediction horizon)')
-ax.set_title('Unilateral Deviation: Final M6 per Agent\n'
-             '(each agent deviates alone, others stay on Baseline)')
 ax.set_xticks(list(x))
 ax.set_xticklabels([nations[a] for a in agents])
 ax.legend(fontsize=9)
