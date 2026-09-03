@@ -2,7 +2,6 @@ import os
 from typing import Dict, List, Optional, Any, Tuple
 
 
-# Parse a CSV line by stripping whitespace and splitting by ';'
 def parse_csv_line(line: str) -> Optional[List[str]]:
     line = line.strip()
     if not line:
@@ -10,13 +9,11 @@ def parse_csv_line(line: str) -> Optional[List[str]]:
     return line.split(';')
 
 
-# Format a log entry for CSV output
 def log_formatter(event_number: int, time: int, event_type: str, *extra: Any) -> str:
     extra_str = ";".join(str(v) for v in extra)
     return f"{event_number};{time};{event_type};{extra_str}"
 
 
-# Load agent strategies from CSV file
 def load_strategies(path_to_strategies: str) -> Dict[int, Dict[str, Any]]:
     strategies = {}
     with open(path_to_strategies, encoding='utf-8') as f:
@@ -43,7 +40,6 @@ def load_strategies(path_to_strategies: str) -> Dict[int, Dict[str, Any]]:
     return strategies
 
 
-# Load initial agent and house data from CSV
 def load_initial_data(path_to_zebra_01: str, strategies: Optional[Dict[int, Dict[str, Any]]] = None) -> Tuple[Dict[int, 'Agent'], Dict[int, 'House']]:
     from entities.agent import Agent
     from entities.house import House
@@ -93,13 +89,11 @@ def load_initial_data(path_to_zebra_01: str, strategies: Optional[Dict[int, Dict
     return agents, houses
 
 
-# Build mapping of house colors to probability indices
 def build_color_to_prob_index(houses: Dict[int, 'House']) -> Dict[str, int]:
     colors = [houses[hid].color for hid in sorted(houses.keys())]
     return {color: idx + 1 for idx, color in enumerate(colors)}
 
 
-# Load travel matrix from geography CSV
 def load_geography(path_to_geography: str) -> List[List[Optional[int]]]:
     rows = []
     with open(path_to_geography, encoding='utf-8') as f:
