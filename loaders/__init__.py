@@ -1,4 +1,3 @@
-# Loaders module
 from .csv_utils import (
     parse_csv_line,
     log_formatter,
